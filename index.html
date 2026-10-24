@@ -1,0 +1,2109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>앱테크 출석부</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F5F3FC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1C1B30" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="출석부">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F3FC; --card:#FFFFFF; --ink:#2B2F4A; --muted:#767B9B;
+  --line:#E6E3F2; --line2:#D0CCE6; --stamp:#C94F6D; --money:#23806A;
+  --accent:#6D55C7; --accentbg:#DDD3F8; --okbg:#C9EEDD; --okfg:#17604A;
+  --pend:#C7C9DA; --pendfg:#767B9B; --pendbg:#ECEBF2;
+  --scrim:rgba(43,47,74,.4);
+  --fb:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --fd:"Do Hyeon","Noto Sans KR",sans-serif;
+  --fs:1;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1C1B30; --card:#27263F; --ink:#EEECFB; --muted:#A9A7CB;
+    --line:#37355C; --line2:#4E4B7C; --stamp:#F292A8; --money:#84DFC0;
+    --accent:#BBAAF3; --accentbg:#3F3969; --okbg:#2C6653; --okfg:#DDF7EC;
+    --pend:#54577A; --pendfg:#A9A7CB; --pendbg:#302E4E;
+    --scrim:rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1C1B30; --card:#27263F; --ink:#EEECFB; --muted:#A9A7CB;
+  --line:#37355C; --line2:#4E4B7C; --stamp:#F292A8; --money:#84DFC0;
+  --accent:#BBAAF3; --accentbg:#3F3969; --okbg:#2C6653; --okfg:#DDF7EC;
+  --pend:#54577A; --pendfg:#A9A7CB; --pendbg:#302E4E;
+  --scrim:rgba(0,0,0,.6);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--fb);
+  font-size:calc(15px * var(--fs));line-height:1.5;
+}
+body.lock{overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus,input:focus,textarea:focus,summary:focus{outline:2px solid var(--accent);outline-offset:2px}
+button:focus:not(:focus-visible){outline:none}
+h1,h2,h3,p{margin:0}
+.disp{font-family:var(--fd);font-weight:400;letter-spacing:-.01em}
+.wrap{max-width:520px;margin:0 auto;padding:18px 16px 110px}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
+.top > div + *{margin-left:12px}
+.date{font-family:var(--fd);font-weight:400;font-size:calc(30px * var(--fs));line-height:1.15}
+.sub{color:var(--muted);font-size:calc(14px * var(--fs));margin-top:2px}
+.mt{text-align:right;font-size:calc(12px * var(--fs));color:var(--muted);flex:0 0 auto}
+.mt b{display:block;font-family:var(--fd);font-weight:400;font-size:calc(20px * var(--fs));line-height:1.2;color:var(--money)}
+.calhead+.mt{margin-bottom:14px}
+
+/* stamp */
+.stamp{
+  width:56px;height:56px;border-radius:50%;padding:0;flex:0 0 auto;
+  border:2px dashed var(--line2);background:transparent;color:var(--line2);
+  font-family:var(--fd);font-size:calc(16px * var(--fs));
+  display:flex;align-items:center;justify-content:center;
+}
+.stamp.sm{width:46px;height:46px;font-size:calc(14px * var(--fs))}
+.stamp.on{
+  border:2px solid var(--gm);color:var(--gd);background:var(--gc);
+  transform:rotate(-8deg);
+  box-shadow:inset 0 0 0 3px var(--card),inset 0 0 0 4.5px var(--gm);
+}
+.stamp:disabled{opacity:.5;cursor:default}
+@keyframes press{
+  0%{transform:scale(1.7) rotate(-22deg);opacity:0}
+  55%{transform:scale(.92) rotate(-6deg);opacity:1}
+  100%{transform:scale(1) rotate(-8deg)}
+}
+.stamp.pop{animation:press .32s ease-out}
+
+/* today rows */
+.list{display:grid;gap:10px}
+.row{
+  display:grid;grid-template-columns:auto 1fr auto;grid-column-gap:12px;align-items:center;
+  background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;
+}
+.rname{font-weight:700;font-size:calc(16px * var(--fs));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rsub{font-size:calc(13px * var(--fs));color:var(--muted)}
+.week{display:flex;margin-top:6px}
+.wd{display:block;width:9px;height:9px;border-radius:50%;background:var(--line);margin-right:6px}
+.wd.on{background:var(--gc);box-shadow:0 0 0 1px var(--gm)}
+.wd.now{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--accent)}
+.wd.on.now{box-shadow:0 0 0 1px var(--gm),0 0 0 3px var(--card),0 0 0 4.5px var(--accent)}
+.amt{
+  border:1px solid var(--line2);background:transparent;border-radius:999px;
+  padding:6px 11px;font-size:calc(13px * var(--fs));color:var(--muted);white-space:nowrap;
+}
+.amt.has{border-color:var(--money);color:var(--money);font-weight:700}
+.list.cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+.row{display:flex;flex-direction:column;align-items:stretch;text-align:left;aspect-ratio:3/2;min-width:0;padding:11px 12px;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .15s,border-color .15s}
+.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row.on{background:var(--gc);border-color:var(--gm)}
+.row .rname{font-size:calc(14px * var(--fs))}
+.row .rsub{font-size:calc(11.5px * var(--fs));margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.on .rname,.row.on .rsub{color:var(--gd)}
+.ramt{margin-top:6px}
+.row .goal{margin-top:8px;padding-top:8px}
+.row.on .goal{border-top-color:var(--gm)}
+.rbot{display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto;padding-top:8px}
+.sgoal .bar{height:10px;background:var(--line)}
+.sgoal .bar i{background:var(--gm);box-shadow:none}
+.row{position:relative}
+.row .ov{position:absolute;inset:0;border:0;border-radius:15px;background:color-mix(in srgb,var(--gc) 62%,transparent);color:var(--gd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:inherit;cursor:pointer;z-index:2;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.row .ov .gf{width:46px;height:46px;border-radius:50%;background:var(--money);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;animation:ovpulse 1.6s ease-in-out infinite}
+.row .ov .am{font-family:var(--fd);font-size:calc(24px * var(--fs));line-height:1.1}
+@keyframes ovpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--money) 45%,transparent)}50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--money) 0%,transparent)}}
+.fxfix{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none;z-index:60}
+.fxfix .pt{position:absolute;width:7px;height:10px;border-radius:2px;animation:ptfly .95s cubic-bezier(.15,.7,.4,1) forwards}
+.fxfix .fl{position:absolute;font-family:var(--fd);font-size:22px;color:var(--money);white-space:nowrap;animation:flup 1s ease-out forwards}
+@keyframes ptfly{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + 46px)) rotate(var(--rot)) scale(.6);opacity:0}}
+@keyframes flup{0%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-48px);opacity:0}}
+.rmt{flex:1;min-width:0;font-size:calc(11px * var(--fs));line-height:1.35;color:var(--muted);padding-bottom:2px}
+.row.on .rmt{color:var(--gd)}
+.rmt b{font-weight:500;color:var(--ink)}
+.row.on .rmt b{color:var(--gd)}
+.rbar{height:5px;border-radius:3px;background:var(--line);margin:3px 0;overflow:hidden}
+.rbar i{display:block;height:100%;background:var(--gm);border-radius:3px}
+.row.on .rbar{background:rgba(255,255,255,.65)}
+.row.on .rbar i{background:var(--gm);box-shadow:none}
+.cpill{border:1px solid var(--money);color:var(--money);border-radius:999px;padding:3px 9px;font-size:calc(11px * var(--fs));font-weight:700;background:var(--card);white-space:nowrap}
+.cpill.mute{border-color:var(--line2);color:var(--muted);font-weight:400}
+.row .wd{width:7px;height:7px;margin-right:4px}
+.row.on .wd{background:rgba(255,255,255,.7)}
+.row.on .wd.on{background:var(--gm);box-shadow:none}
+.row.on .wd.now,.row.on .wd.on.now{box-shadow:0 0 0 2px var(--gc),0 0 0 3.5px var(--accent)}
+.row .stamp{width:54px;height:54px;font-size:calc(16px * var(--fs))}
+.row.on .stamp.on{background:#fff;color:var(--gd);box-shadow:inset 0 0 0 3px var(--gc),inset 0 0 0 4.5px var(--gm)}
+.row.pop .stamp{animation:press .32s ease-out}
+.empty{background:var(--card);border:1px dashed var(--line2);border-radius:16px;padding:28px 20px;text-align:center}
+.empty .disp{font-size:calc(22px * var(--fs));margin-bottom:6px}
+.todaysum{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 14px;margin-bottom:14px}
+.tsrow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;font-size:calc(14px * var(--fs))}
+.tsrow+.tsrow{border-top:1px solid var(--line)}
+.tsname{font-weight:700}
+.tsamt{color:var(--money);font-weight:700}
+.tsnone{color:var(--muted)}
+.empty p{color:var(--muted);margin-bottom:16px}
+
+/* buttons */
+.btn{
+  border:1px solid var(--accentbg);background:var(--accentbg);color:var(--ink);
+  border-radius:12px;padding:11px 16px;font-weight:700;font-size:calc(15px * var(--fs));
+}
+.btn.sm{padding:8px 12px;font-size:calc(14px * var(--fs))}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line2)}
+.btn.danger{background:transparent;color:var(--stamp);border-color:var(--stamp)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btnrow{display:flex;margin-top:14px}
+.btnrow .btn{flex:1}
+.btnrow .btn + .btn{margin-left:8px}
+
+/* nav */
+.nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;
+  background:var(--card);border-top:1px solid var(--line);
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
+}
+.nav button{
+  flex:1;background:none;border:0;padding:6px 0;color:var(--muted);font-size:calc(12px * var(--fs));
+  display:flex;flex-direction:column;align-items:center;
+}
+.nav button span{margin-top:2px}
+.nav button[aria-current="page"]{color:var(--accent);font-weight:700}
+
+/* calendar */
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.calhead .disp{font-size:calc(26px * var(--fs))}
+.calctl{display:flex;align-items:center}
+.iconbtn{
+  width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);
+  display:flex;align-items:center;justify-content:center;font-size:calc(18px * var(--fs));margin-left:6px;padding:0;
+}
+.iconbtn.txt{width:auto;border-radius:999px;padding:0 12px;font-size:calc(13px * var(--fs))}
+.chips{display:flex;overflow-x:auto;margin:0 -16px 10px;padding:2px 16px 6px}
+.chip{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;
+  padding:6px 12px;font-size:calc(13px * var(--fs));display:flex;align-items:center;margin-right:8px;
+}
+.chip i{display:block;width:9px;height:9px;border-radius:50%;background:var(--gc);box-shadow:0 0 0 1px var(--gm);margin-right:7px}
+.chip[aria-pressed="true"]{background:var(--accentbg);color:var(--ink);border-color:var(--accent);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);grid-gap:4px}
+.dow{text-align:center;font-size:calc(12px * var(--fs));color:var(--muted);padding:4px 0}
+.dow.sun,.dn.sun{color:var(--stamp)}
+.day{
+  min-height:60px;border:1px solid var(--line);background:var(--card);border-radius:10px;
+  padding:5px 1px 4px;display:flex;flex-direction:column;align-items:center;
+}
+.day.today{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.day.today .dn{font-weight:700}
+.day.claimed{border:2px solid var(--accent);background:var(--accentbg)}
+.day.proj{border:1.5px dashed var(--accent)}
+.day.today.claimed{box-shadow:0 0 0 1px var(--ink)}
+.day.today.proj{box-shadow:0 0 0 1px var(--ink)}
+.day:disabled{opacity:.5;cursor:default}
+.dn{font-size:calc(13px * var(--fs));line-height:1.1}
+.dots{display:flex;flex-wrap:wrap;justify-content:center;max-width:40px;margin-top:5px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--gc);box-shadow:0 0 0 1px var(--gm);margin:2px}
+.mini{
+  width:22px;height:22px;border-radius:50%;margin-top:4px;border:2px solid var(--gm);
+  background:var(--gc);transform:rotate(-8deg);box-shadow:inset 0 0 0 2px var(--card);
+}
+.amt-s{font-size:calc(10px * var(--fs));line-height:1.2;color:var(--money);margin-top:2px;font-weight:700}
+.sum{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 14px}
+.sumrow{display:flex;align-items:center;padding:10px 0}
+.sumrow + .sumrow{border-top:1px solid var(--line)}
+.sumrow i{display:block;width:10px;height:10px;border-radius:50%;background:var(--gc);box-shadow:0 0 0 1px var(--gm);margin-right:10px;flex:0 0 auto}
+.sumrow .n{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumrow .d{color:var(--muted);font-size:calc(13px * var(--fs));margin-left:10px}
+.sumrow .m{color:var(--money);font-weight:700;margin-left:10px;min-width:64px;text-align:right}
+.note{color:var(--muted);font-size:calc(13px * var(--fs));margin-top:10px}
+.fsizebox{margin-top:22px}
+.fsizebox summary{font-weight:700;cursor:pointer}
+.fsizeWrap{margin-top:14px}
+.fsizeWrap input[type=range]{
+  width:100%;accent-color:var(--accent);height:28px;margin:0;
+}
+.fsizeTicks{display:flex;justify-content:space-between;font-size:calc(11px * var(--fs));color:var(--muted);margin-top:2px}
+.fsizeLabel{text-align:center;margin-top:8px;font-weight:700;color:var(--accent);font-size:calc(14px * var(--fs))}
+.pctbadge{font-size:calc(12px * var(--fs));font-weight:700;color:var(--accent);background:var(--accentbg);border-radius:999px;padding:2px 8px;margin-left:6px}
+
+/* games */
+.tot{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.tot span{font-size:calc(13px * var(--fs));color:var(--muted);display:block}
+.tot b{font-family:var(--fd);font-weight:400;font-size:calc(26px * var(--fs));color:var(--money);margin-right:14px}
+.recvBtn{display:flex;align-items:baseline;gap:8px;border:0;background:none;padding:0;text-align:left}
+.recvBtn b{margin-right:0}
+.recvBtn .editMark{font-size:calc(13px * var(--fs));color:var(--muted);font-style:normal}
+.recvInp{width:100%;font-family:var(--fd);font-weight:400;font-size:calc(22px * var(--fs));color:var(--money);padding:6px 10px;margin-top:2px}
+.qrow{display:flex;align-items:center;gap:8px;padding-top:9px;margin-top:9px;border-top:1px dashed var(--line2)}
+.qrow .qlb{font-size:calc(13px * var(--fs));color:var(--muted);flex-shrink:0}
+.qbtns{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+.qbtns button{border:1px solid var(--line2);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 11px;font-size:calc(12.5px * var(--fs));font-weight:700;font-family:var(--fb)}
+.qbtns button:active{background:var(--accentbg);border-color:var(--accent)}
+.aRow{display:flex;justify-content:space-between;align-items:center;padding-top:9px;margin-top:9px;border-top:1px dashed var(--line2);font-size:calc(13px * var(--fs));gap:8px}
+.aRow span{color:var(--muted)}
+.aRow b{font-family:var(--fd);font-weight:400;font-size:calc(17px * var(--fs));margin-right:0;white-space:nowrap}
+.aRow.hold b{color:var(--accent)}
+.aRow.used b{color:var(--muted)}
+.aBtn{display:block;width:100%;margin-top:12px;border:0;background:var(--accent);color:#fff;font-family:var(--fb);font-weight:700;font-size:calc(13px * var(--fs));padding:10px 0;border-radius:10px}
+.destchips{display:flex;flex-wrap:wrap;gap:6px}
+.destchips button{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:calc(12.5px * var(--fs));font-family:var(--fb)}
+.destchips button[aria-pressed="true"]{background:var(--accentbg);border-color:var(--accent);font-weight:700;color:var(--ink)}
+.wlist{margin-top:18px;border-top:1px solid var(--line);padding-top:4px}
+.wrow{display:flex;align-items:center;gap:8px;padding:9px 0;font-size:calc(13px * var(--fs))}
+.wrow+.wrow{border-top:1px solid var(--line)}
+.wrow .wdest{font-weight:700;flex:1;min-width:0}
+.wrow .wdt{color:var(--muted);font-size:calc(11.5px * var(--fs))}
+.wrow .wamt{color:var(--stamp);font-weight:700;white-space:nowrap}
+.wrow .x{width:26px;height:26px;border-radius:50%;border:1px solid var(--line2);background:transparent;font-size:calc(14px * var(--fs));line-height:1;padding:0;color:var(--muted);flex-shrink:0}
+.gcard{
+  background:var(--card);
+  border:1px solid var(--line);border-left:6px solid var(--gc);border-radius:16px;
+}
+.ghead{display:block;width:100%;text-align:left;background:none;border:0;padding:12px 14px}
+.glist{padding:0 14px 12px}
+.gname{display:block;font-weight:700;font-size:calc(16px * var(--fs))}
+.gmeta{display:block;font-size:calc(13px * var(--fs));color:var(--muted)}
+.gmemo{display:block;font-size:calc(13px * var(--fs));margin-top:4px;color:var(--ink);opacity:.8}
+.tag{font-size:calc(11px * var(--fs));font-weight:500;color:var(--muted);border:1px solid var(--line2);border-radius:999px;padding:1px 7px;margin-left:6px}
+.tag.done{color:var(--okfg);background:var(--okbg);border-color:transparent}
+.secTitle{font-size:calc(12px * var(--fs));font-weight:700;color:var(--muted);margin:0 0 8px 2px}
+.gcard.done{opacity:.6}
+.gcard.done .gname{text-decoration:line-through;text-decoration-color:var(--line2)}
+
+/* asset tab */
+.navIcoWrap{position:relative;display:inline-block}
+.navDot{position:absolute;top:-1px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--stamp);border:2px solid var(--card)}
+.assetBig{text-align:center;padding:8px 0 4px}
+.assetBig span{font-size:calc(12px * var(--fs));color:var(--muted);display:block}
+.assetBig .wrap{display:flex;align-items:baseline;justify-content:center;gap:8px;margin-top:4px}
+.assetBig b{font-family:var(--fd);font-weight:400;font-size:calc(30px * var(--fs));color:var(--ink)}
+.assetEditRow{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:6px}
+.assetEditRow input{max-width:160px;text-align:center;font-family:var(--fd);font-size:calc(22px * var(--fs))}
+.ptrack{height:14px;border-radius:7px;overflow:hidden;display:flex;margin:10px 0 9px}
+.ptrack .pok{height:100%;background:var(--accentbg)}
+.ptrack .plk{height:100%;background:var(--pend)}
+.plegend{display:flex;justify-content:space-between;align-items:center;font-size:calc(12px * var(--fs));color:var(--muted)}
+.plegend .linklike{border:0;background:none;padding:0;font-size:calc(12px * var(--fs));color:var(--muted);text-decoration:underline;text-decoration-style:dotted;font-family:var(--fb)}
+.avail-editwrap{display:flex;align-items:center;gap:4px}
+.availinp{width:70px;border:1px solid var(--accent);border-radius:7px;padding:3px 6px;font-size:calc(12px * var(--fs));font-family:var(--fb);color:var(--ink);background:var(--card)}
+.availok,.availx{border:0;background:none;border-radius:50%;width:20px;height:20px;line-height:1;font-size:12px;padding:0}
+.availok{color:var(--okfg)}
+.availx{color:var(--muted)}
+.plegend .ok::before{content:'●';color:var(--accent);margin-right:4px}
+.plegend .lk::before{content:'●';color:var(--pendfg);margin-right:4px}
+.assetQ{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+.assetQ button{border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:calc(12.5px * var(--fs));font-weight:700;font-family:var(--fb)}
+.assetQ button:active{background:var(--accentbg);border-color:var(--accent)}
+.assetQ button:disabled{opacity:.4;pointer-events:none}
+.assetQ button.add{border-style:dashed;color:var(--accent);border-color:var(--accent);background:none}
+.assetQ button.editx{position:relative;padding-right:24px;color:var(--pendfg);border-color:var(--pend)}
+.assetQ button.editx::after{content:'×';position:absolute;right:7px;top:50%;transform:translateY(-50%);font-weight:700}
+.addpop{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:-6px 0 14px}
+.addpop input{margin-bottom:10px}
+.pgbtn{border:1px solid var(--line2);background:var(--paper);border-radius:999px;padding:7px 13px;font-size:calc(12.5px * var(--fs));font-weight:700;font-family:var(--fb);color:var(--ink)}
+.pgbtn.sel{background:var(--accentbg);border-color:var(--accent)}
+.inline-modal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:-6px 0 14px;box-shadow:0 8px 20px rgba(43,47,74,.1)}
+.inline-modal .amt{text-align:center;font-family:var(--fd);font-weight:400;font-size:calc(20px * var(--fs));margin-bottom:12px}
+.row2{display:flex;gap:8px}
+.row2 button{flex:1;border:1px solid var(--line2);background:var(--paper);border-radius:10px;padding:9px 0;font-size:calc(12.5px * var(--fs));font-weight:700;font-family:var(--fb);color:var(--ink)}
+.row2 button.sel{background:var(--accentbg);border-color:var(--accent)}
+.destbadge{font-size:calc(10px * var(--fs));font-weight:700;border-radius:999px;padding:2px 8px;margin-right:4px;white-space:nowrap;display:inline-block}
+.destbadge.naver{background:#E7F3DE;color:#3C7A1E}
+.destbadge.olive{background:#E9F3DE;color:#5A7A1E}
+.destbadge.etc{background:var(--pendbg);color:var(--pendfg)}
+.assetCards{display:flex;gap:8px;margin-bottom:12px}
+.assetCard{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.assetCard span{font-size:calc(11px * var(--fs));color:var(--muted);display:block;margin-bottom:3px}
+.assetCard b{font-family:var(--fd);font-weight:400;font-size:calc(17px * var(--fs))}
+.ledger{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 12px;margin-top:10px}
+.lrow{display:flex;align-items:center;gap:9px;padding:10px 0;font-size:calc(12.5px * var(--fs))}
+.lrow+.lrow{border-top:1px solid var(--line)}
+.lrow .ic{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.lrow.add .ic{background:var(--okbg);color:var(--okfg)}
+.lrow.sub .ic{background:var(--pendbg);color:var(--pendfg)}
+.lrow.lock .ic{background:var(--pendbg);color:var(--pendfg)}
+.lrow.set .ic{background:var(--accentbg);color:var(--accent)}
+.lrow .tx{flex:1;min-width:0}
+.lrow .tx b{display:block;font-weight:700;font-size:calc(12.5px * var(--fs))}
+.lrow .tx span{color:var(--muted);font-size:calc(11px * var(--fs))}
+.lrow .amt{font-weight:700;white-space:nowrap;font-size:calc(12px * var(--fs))}
+.lrow.add .amt{color:var(--okfg)}
+.lrow.sub .amt{color:var(--pendfg)}
+.lrow.lock .amt{color:var(--pendfg)}
+.lrow.set .amt{color:var(--muted)}
+.dchip{background:var(--pendbg);color:var(--pendfg);font-size:calc(10px * var(--fs));font-weight:700;border-radius:999px;padding:2px 7px;white-space:nowrap}
+.bk{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.bk summary{font-weight:700;cursor:pointer}
+.ordbar{display:flex;flex-direction:column;flex:0 0 auto}
+.ordbar button{
+  width:28px;height:22px;border:1px solid var(--line2);background:var(--card);color:var(--muted);
+  font-size:calc(11px * var(--fs));line-height:1;padding:0;
+}
+.ordbar button:first-child{border-radius:8px 8px 0 0;border-bottom:0}
+.ordbar button:last-child{border-radius:0 0 8px 8px}
+.ordbar button:disabled{opacity:.3}
+.gtophead{display:flex;align-items:stretch}
+.gtophead .ghead{flex:1}
+.stats{margin-top:18px}
+.statrow{margin-bottom:16px}
+.statrow:last-child{margin-bottom:0}
+.statlabel{font-size:calc(13px * var(--fs));color:var(--muted);margin-bottom:8px}
+.chartwrap{display:flex;align-items:flex-end;height:110px;gap:6px}
+.cbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.barstack{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:100%;max-width:28px}
+.cbarfill{width:100%;background:var(--accent);border-radius:2px 2px 0 0}
+.cbarfill.pending{border-radius:6px 6px 2px 2px}
+.cbarfill.actual:last-child{border-radius:0 0 2px 2px}
+.cbarfill.actual:only-child{border-radius:6px 6px 2px 2px}
+.cbarv{font-size:calc(10px * var(--fs));color:var(--money);margin-bottom:3px;white-space:nowrap}
+.cbar.future .cbarv{color:var(--accent)}
+.cbarm{font-size:calc(11px * var(--fs));color:var(--muted);margin-top:5px}
+.cbarm.now{color:var(--ink);font-weight:700}
+.cbarpct{font-size:calc(10px * var(--fs));color:var(--accent);font-weight:700;margin-top:1px}
+.statnote{font-size:calc(12px * var(--fs));color:var(--muted);margin-top:8px}
+.potline{display:flex;justify-content:space-between;align-items:center;padding-top:10px;margin-top:10px;border-top:1px dashed var(--line2)}
+.potline span{font-size:calc(13px * var(--fs));color:var(--muted)}
+.potline b{font-family:var(--fd);font-weight:400;font-size:calc(20px * var(--fs));color:var(--accent)}
+.rwScrim{position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:40;padding:24px}
+.rwScrim.show{display:flex}
+.rwModal{background:var(--card);border-radius:20px;padding:28px 24px 22px;text-align:center;max-width:300px;width:100%;transform:scale(.8);opacity:0;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .2s}
+.rwScrim.show .rwModal{transform:scale(1);opacity:1}
+.rwStamp{width:72px;height:72px;border-radius:50%;background:var(--gc);border:3px solid var(--gm);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:calc(32px * var(--fs));transform:rotate(-8deg)}
+.rwModal h3{font-size:calc(19px * var(--fs));margin:0 0 6px}
+.rwAmt{font-family:var(--fd);font-size:calc(26px * var(--fs));color:var(--money);margin:10px 0 22px}
+.rwModal button{width:100%;border:0;background:var(--accent);color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:calc(15px * var(--fs))}
+.rwModal .later{background:transparent;color:var(--muted);font-weight:400;margin-top:6px}
+.dpScrim{position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:41;padding:24px}
+.dpScrim.show{display:flex}
+.dpModal{background:var(--card);border-radius:20px;max-width:300px;width:100%;overflow:hidden;transform:translateY(24px) scale(.95);opacity:0;transition:all .28s cubic-bezier(.34,1.56,.64,1)}
+.dpScrim.show .dpModal{transform:translateY(0) scale(1);opacity:1}
+.dpRibbon{background:var(--accent);color:#fff;text-align:center;padding:16px 0 14px}
+.dpRibbon .disp{font-size:calc(22px * var(--fs))}
+.dpRibbon small{font-size:calc(12px * var(--fs));opacity:.85}
+.dpBody{padding:16px 18px 4px}
+.dpRow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;font-size:calc(14px * var(--fs))}
+.dpRow+.dpRow{border-top:1px solid var(--line)}
+.dpRow b{color:var(--money)}
+.dpModal button{width:calc(100% - 36px);margin:14px 18px 18px;border:0;background:var(--ink);color:var(--paper);border-radius:12px;padding:11px;font-weight:700;font-size:calc(15px * var(--fs))}
+.hdScrim{position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:42;padding:24px}
+.hdScrim.show{display:flex}
+.hdModal{background:var(--card);border-radius:20px;padding:26px 22px 20px;text-align:center;max-width:300px;width:100%;transform:scale(.9);opacity:0;transition:transform .22s cubic-bezier(.34,1.56,.64,1),opacity .18s}
+.hdScrim.show .hdModal{transform:scale(1);opacity:1}
+.hdIcon{width:60px;height:60px;border-radius:50%;background:var(--accentbg);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:calc(28px * var(--fs))}
+.hdModal h3{font-size:calc(17px * var(--fs));margin:0 0 6px}
+.hdModal p{color:var(--muted);font-size:calc(13px * var(--fs));margin:0 0 20px;line-height:1.5}
+.hdBtns{display:flex;gap:8px}
+.hdBtns button{flex:1;border:0;border-radius:12px;padding:12px 0;font-weight:700;font-size:calc(14px * var(--fs))}
+.hdBtns .hdLater{background:var(--line);color:var(--ink)}
+.hdBtns .hdNow{background:var(--accent);color:#fff}
+.bk .hint{margin:8px 0}
+.bk textarea{margin:10px 0}
+.hint{color:var(--muted);font-size:calc(13px * var(--fs))}
+#savestat{margin-top:14px}
+
+/* goals */
+.goal{grid-column:1 / -1;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line2)}
+.gl{padding-top:10px}
+.gl:first-child{padding-top:0}
+.gl.dim{opacity:.6}
+.gtop{display:flex;align-items:center;justify-content:space-between}
+.gr{display:flex;align-items:center;flex:0 0 auto;margin-left:10px}
+.gt{font-size:calc(14px * var(--fs));font-weight:500}
+.gtxt{font-size:calc(13px * var(--fs));color:var(--muted)}
+.gtxt.ok{color:var(--money);font-weight:700;margin-right:8px}
+.gtxt.bad{color:var(--stamp)}
+.geta{font-size:calc(12px * var(--fs));color:var(--muted);margin-top:4px}
+.geta.bad{color:var(--stamp)}
+.bar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--gc);box-shadow:inset 0 0 0 1px var(--gm);border-radius:4px}
+.claim{border:0;background:var(--okbg);color:var(--okfg);border-radius:999px;padding:5px 11px;font-size:calc(13px * var(--fs));font-weight:700}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:calc(12px * var(--fs));padding:2px 0 2px 8px}
+.claimtoggle{display:block;width:100%;text-align:left;padding:10px 0 2px;font-size:calc(13px * var(--fs));font-weight:700;color:var(--accent)}
+.gedit{display:grid;grid-template-columns:1fr 1.3fr 1fr 34px;grid-column-gap:6px;margin-bottom:6px;align-items:center}
+.gedit.head span{font-size:calc(12px * var(--fs));color:var(--muted)}
+.gedit .inp{padding:8px;font-size:calc(15px * var(--fs));min-width:0}
+.gedit .x{width:34px;height:34px;border-radius:50%;border:1px solid var(--line2);background:transparent;font-size:calc(18px * var(--fs));line-height:1;padding:0;color:var(--muted)}
+
+/* sheet */
+.scrim{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--scrim);z-index:20;display:none}
+.scrim.open{display:block}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:520px;margin:0 auto;
+  background:var(--card);border-radius:22px 22px 0 0;border:1px solid var(--line);border-bottom:0;
+  padding:8px 18px calc(18px + env(safe-area-inset-bottom,0px));
+  max-height:88%;overflow-y:auto;
+  transform:translateY(105%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;
+}
+.sheet.open{transform:none;visibility:visible;transition:transform .22s ease}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line2);margin:4px auto 12px}
+.sh-t{font-size:calc(24px * var(--fs));line-height:1.2}
+.sh-s{color:var(--muted);font-size:calc(14px * var(--fs));margin-bottom:8px}
+.erow{display:flex;align-items:center;padding:10px 0}
+.erow + .erow{border-top:1px solid var(--line)}
+.ename{flex:1;font-weight:700;margin:0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eamt{display:flex;align-items:center;color:var(--muted)}
+.eamt input{width:96px;text-align:right;margin-right:6px}
+.eamt-done{color:var(--money);font-weight:700;font-size:calc(14px * var(--fs));white-space:nowrap}
+.field{margin-top:14px}
+.field > label,.field > .lb{display:block;font-size:calc(13px * var(--fs));color:var(--muted);margin-bottom:6px}
+.inp{
+  width:100%;padding:10px 12px;font-size:calc(16px * var(--fs));background:var(--paper);
+  border:1px solid var(--line2);border-radius:10px;color:var(--ink);
+}
+textarea.inp{resize:vertical}
+.seg{display:flex}
+.seg button{
+  flex:1;padding:9px 6px;font-size:calc(14px * var(--fs));background:var(--paper);border:1px solid var(--line2);margin-left:-1px;
+}
+.seg button:first-child{border-radius:10px 0 0 10px;margin-left:0}
+.seg button:last-child{border-radius:0 10px 10px 0}
+.seg button[aria-pressed="true"]{background:var(--accentbg);color:var(--ink);border-color:var(--accent);font-weight:700;position:relative}
+.sw{display:flex;flex-wrap:wrap}
+.sw button{
+  width:34px;height:34px;border-radius:50%;border:0;margin:0 10px 8px 0;background:var(--gc);
+  box-shadow:0 0 0 1px var(--gm);padding:0;
+}
+.sw button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+.chk{display:flex;align-items:center;font-size:calc(14px * var(--fs))}
+.chk input{width:18px;height:18px;margin:0 8px 0 0}
+.err{color:var(--stamp);font-size:calc(13px * var(--fs));margin-top:8px;min-height:1px}
+.warn{color:var(--stamp);font-size:calc(13px * var(--fs));margin-top:10px}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:30;
+  background:var(--ink);color:var(--paper);border-radius:12px;padding:10px 14px;font-size:calc(14px * var(--fs));
+  display:none;align-items:center;max-width:calc(100% - 32px);transform:translateX(-50%);
+}
+.toast.show{display:flex}
+.toast button{background:none;border:0;color:inherit;font-weight:700;text-decoration:underline;margin-left:14px;padding:2px}
+
+@media (prefers-reduced-motion:reduce){
+  .stamp.pop,.row.pop .stamp{animation:none}
+  .sheet,.sheet.open{transition:none}
+}
+</style>
+</head>
+<body>
+<main id="view" class="wrap"></main>
+
+<nav class="nav" aria-label="메뉴">
+  <button data-tab="today" aria-current="page">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>
+    <span>오늘</span>
+  </button>
+  <button data-tab="cal">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
+    <span>달력</span>
+  </button>
+  <button data-tab="games">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+    <span>게임</span>
+  </button>
+  <button data-tab="asset">
+    <span class="navIcoWrap">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+      <span id="assetDot" class="navDot" hidden></span>
+    </span>
+    <span>자산</span>
+  </button>
+</nav>
+
+<div id="scrim" class="scrim" data-act="closeSheet"></div>
+<div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-hidden="true"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="rwScrim" class="rwScrim" role="dialog" aria-modal="true" data-act="laterReward"><div id="rwModal" class="rwModal"></div></div>
+<div id="dpScrim" class="dpScrim" role="dialog" aria-modal="true" data-act="closeDaily"><div id="dpModal" class="dpModal"></div></div>
+<div id="hdScrim" class="hdScrim" role="dialog" aria-modal="true" data-act="hideLater"><div id="hdModal" class="hdModal"></div></div>
+
+<script>
+(function(){
+'use strict';
+
+var COLORS=['#F6B8C9','#A9D6F0','#FBE3A0','#B9E4C6','#CDBCF2','#FFC9A8','#A8E3DD','#D5D8EA'];
+var OLD_COLORS=['#D93F2B','#2F6FDE','#E0A21A','#187A5F','#8B5CC9','#DB4C8A','#0E8AA6','#6B7391'];
+var DOW=['일','월','화','수','목','금','토'];
+var LS='apptech-attendance-v1';
+
+/* ---------- utils ---------- */
+function $(s,r){return (r||document).querySelector(s);}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function pad(n){return n<10?'0'+n:''+n;}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function parseDate(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function todayStr(){return ymd(new Date());}
+function addDays(s,n){var d=parseDate(s);d.setDate(d.getDate()+n);return ymd(d);}
+function fmt(n){return (Math.round(n*100)/100).toLocaleString('ko-KR');}
+function soft(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+function gid_(){return 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function parseAmt(v){var n=parseFloat(String(v).replace(/[^0-9.]/g,''));return (isFinite(n)&&n>0)?Math.min(Math.round(n*100)/100,1e9):0;}
+function mix(a,b,t){
+  var x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16),out='#',i,sh,c;
+  for(i=0;i<3;i++){
+    sh=16-8*i;
+    c=Math.round(((x>>sh)&255)*(1-t)+((y>>sh)&255)*t);
+    out+=(c<16?'0':'')+c.toString(16);
+  }
+  return out;
+}
+function colorStyle(hex){return '--gc:'+hex+';--gm:'+mix(hex,'#2B2F4A',0.3)+';--gd:'+mix(hex,'#2B2F4A',0.72)+';';}
+
+/* ---------- state ---------- */
+var now0=new Date();
+var S={games:[],days:{},ledger:[],cashBalance:0,pendAdj:0,addingPend:false,pendGame:'',editingBalance:false,editingAvail:false,assetDetail:false,assetNotify:false,quickAmts:[5000,10000,30000,50000],quickEditMode:false,addingQuick:false,convertConfirm:null,tab:'today',cal:{y:now0.getFullYear(),m:now0.getMonth()},filter:'all',sheet:null,popKey:null,undo:null,seed:'',showArch:false,rewardQueue:[],rewardModal:null,expandClaimed:{},hideSuggest:null};
+
+function gameById(id){for(var i=0;i<S.games.length;i++){if(S.games[i].id===id)return S.games[i];}return null;}
+function rec(date,gid){var d=S.days[date];return (d&&Object.prototype.hasOwnProperty.call(d,gid))?d[gid]:undefined;}
+function isChecked(date,gid){return rec(date,gid)!==undefined;}
+function setRec(date,gid,val){
+  var d=S.days[date];
+  if(val===undefined){
+    if(d){delete d[gid];if(!Object.keys(d).length)delete S.days[date];}
+  }else{
+    if(!d){d=S.days[date]={};}
+    d[gid]=val;
+  }
+  changed('y'+date.slice(0,4));
+}
+function streak(gid){
+  var t=todayStr(),c=isChecked(t,gid)?t:addDays(t,-1),n=0;
+  while(isChecked(c,gid)){n++;c=addDays(c,-1);}
+  return n;
+}
+function hasGoals(g){return !!(g&&g.goals&&g.goals.length);}
+function claimSum(gid,pre){
+  var g=gameById(gid),sum=0;
+  if(!hasGoals(g))return 0;
+  g.goals.forEach(function(x){if(x.claimed&&(!pre||(x.claimedOn||'').indexOf(pre)===0))sum+=x.reward;});
+  return sum;
+}
+function monthStats(gid,y,m){
+  var pre=y+'-'+pad(m+1)+'-',days=0,sum=0,k,v;
+  for(k in S.days){if(k.indexOf(pre)===0){v=S.days[k][gid];if(v!==undefined){days++;sum+=v;}}}
+  return {days:days,sum:sum+claimSum(gid,pre)};
+}
+function totalStats(gid){
+  var days=0,sum=0,k,v;
+  for(k in S.days){v=S.days[k][gid];if(v!==undefined){days++;sum+=v;}}
+  return {days:days,sum:sum+claimSum(gid)};
+}
+function attendedDates(g){
+  var out=[],k,st=g.start||'';
+  for(k in S.days){if(S.days[k][g.id]!==undefined&&(!st||k>=st))out.push(k);}
+  out.sort();
+  return out;
+}
+function daysLeft(due){
+  if(!due)return null;
+  return Math.round((parseDate(due)-parseDate(todayStr()))/86400000);
+}
+function goalsOf(g){return (g.goals||[]).slice().sort(function(a,b){return a.days-b.days;});}
+function attendedInfo(g){
+  var d=attendedDates(g),b=g.base||0;
+  return {dates:d,base:b,total:d.length+b};
+}
+function goalState(goal,p){
+  var t=todayStr(),reach=null,st;
+  if(p.total>=goal.days)reach=goal.days<=p.base?'0000-00-00':p.dates[goal.days-p.base-1];
+  if(goal.claimed)st='claimed';
+  else if(reach&&(!goal.due||reach<=goal.due))st='done';
+  else if(goal.due&&goal.due<t)st='expired';
+  else st='run';
+  return {pc:p.total,left:daysLeft(goal.due),st:st};
+}
+function focusGoal(g,p){
+  var list=goalsOf(g),i,first=null,gs;
+  for(i=0;i<list.length;i++){
+    gs=goalState(list[i],p);
+    if(gs.st==='done')return {goal:list[i],gs:gs};
+    if(gs.st==='run'&&!first)first={goal:list[i],gs:gs};
+  }
+  return first;
+}
+function claimable(gs){
+  var n=0;
+  gs.forEach(function(g){
+    if(!hasGoals(g))return;
+    var p=attendedInfo(g);
+    g.goals.forEach(function(x){if(goalState(x,p).st==='done')n++;});
+  });
+  return n;
+}
+function fmtMD(ds){var p=parseDate(ds);return (p.getMonth()+1)+'월 '+p.getDate()+'일';}
+function goalLine(g,go,gs,withUndo){
+  var pc=Math.min(gs.pc,go.days),pct=Math.round(pc/go.days*100),right='',sub='';
+  if(gs.st==='claimed'){
+    right='<span class="gtxt">수령 완료</span>'+(withUndo?'<button class="linkbtn" data-act="unclaim" data-g="'+g.id+'" data-goal="'+go.id+'">취소</button>':'');
+  }else if(gs.st==='done'){
+    right='<span class="gtxt ok">달성</span><button class="claim" data-act="claim" data-g="'+g.id+'" data-goal="'+go.id+'">수령 체크</button>';
+  }else if(gs.st==='expired'){
+    right='<span class="gtxt bad">기한 지남 · '+pc+'/'+go.days+'일</span>';
+  }else{
+    var remain=go.days-pc,eta=addDays(todayStr(),remain),late=go.due&&eta>go.due;
+    right='<span class="gtxt'+(late?' bad':'')+'">'+pc+'/'+go.days+'일'+(gs.left!==null?' · '+gs.left+'일 남음':'')+'</span>';
+    sub='<div class="geta'+(late?' bad':'')+'">'+fmtMD(eta)+'</div>';
+  }
+  return '<div class="gl'+((gs.st==='claimed'||gs.st==='expired')?' dim':'')+'"><div class="gtop"><span class="gt">'+go.days+'일 플레이 · '+fmt(go.reward)+g.unit+'</span><span class="gr">'+right+'</span></div>'+
+    '<div class="bar"><i style="width:'+pct+'%"></i></div>'+sub+'</div>';
+}
+function monthKey(y,m){return y+'-'+pad(m+1);}
+function pendingByMonth(unit){
+  var map={};
+  S.games.forEach(function(g){
+    if(g.unit!==unit||!hasGoals(g))return;
+    var p=attendedInfo(g);
+    g.goals.forEach(function(go){
+      var gs=goalState(go,p);
+      if(gs.st!=='run'&&gs.st!=='done')return;
+      var remain=Math.max(0,go.days-p.total),eta=addDays(todayStr(),remain);
+      if(go.due&&eta>go.due)return;
+      var d=parseDate(eta),key=monthKey(d.getFullYear(),d.getMonth());
+      var prog=Math.max(0,Math.min(1,p.total/go.days));
+      if(!map[key])map[key]={sum:0,wsum:0};
+      map[key].sum+=go.reward;map[key].wsum+=go.reward*prog;
+    });
+  });
+  return map;
+}
+function potentialTotal(unit){
+  var total=0;
+  S.games.forEach(function(g){
+    if(g.unit!==unit)return;
+    total+=claimSum(g.id);
+    if(!hasGoals(g))return;
+    var p=attendedInfo(g);
+    g.goals.forEach(function(go){
+      var gs=goalState(go,p);
+      if(gs.st==='run'||gs.st==='done')total+=go.reward;
+    });
+  });
+  return total;
+}
+function monthlySeries(unit,pastN,futureN){
+  var now=new Date(),out=[],i,y,m,actual,key,pending=pendingByMonth(unit),pd;
+  for(i=pastN-1;i>=0;i--){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    y=d.getFullYear();m=d.getMonth();key=monthKey(y,m);
+    actual=0;
+    S.games.forEach(function(g){if(g.unit===unit)actual+=monthStats(g.id,y,m).sum;});
+    pd=i===0?(pending[key]||{sum:0,wsum:0}):{sum:0,wsum:0};
+    out.push({label:(m+1)+'월',actual:actual,pend:pd.sum,prog:pd.sum?pd.wsum/pd.sum:0,sum:actual+pd.sum,now:(i===0),future:false});
+  }
+  for(i=1;i<=futureN;i++){
+    var d2=new Date(now.getFullYear(),now.getMonth()+i,1);
+    y=d2.getFullYear();m=d2.getMonth();key=monthKey(y,m);
+    pd=pending[key]||{sum:0,wsum:0};
+    out.push({label:(m+1)+'월',actual:0,pend:pd.sum,prog:pd.sum?pd.wsum/pd.sum:0,sum:pd.sum,now:false,future:true});
+  }
+  return out;
+}
+function unitsUsed(){
+  var set={};S.games.forEach(function(g){if(g.unit)set[g.unit]=1;});
+  return Object.keys(set);
+}
+function statChart(unit){
+  var data=monthlySeries(unit,4,3),max=0,i;
+  data.forEach(function(x){if(x.sum>max)max=x.sum;});
+  if(max<=0)max=1;
+  var bars='';
+  data.forEach(function(x){
+    var ah=Math.round(x.actual/max*100),ph=Math.round(x.pend/max*100);
+    var op=(0.3+0.65*x.prog).toFixed(2);
+    var layers='';
+    if(x.pend>0)layers+='<div class="cbarfill pending" style="height:'+Math.max(ph,2)+'%;opacity:'+op+'"></div>';
+    if(x.actual>0||!x.pend)layers+='<div class="cbarfill actual" style="height:'+Math.max(ah,x.actual>0?4:0)+'%"></div>';
+    var pct=x.sum>0?Math.round(x.actual/x.sum*100):null;
+    bars+='<div class="cbar'+(x.future?' future':'')+'"><div class="cbarv">'+(x.sum>0?fmt(x.sum):'')+'</div>'+
+      '<div class="barstack">'+layers+'</div>'+
+      '<div class="cbarm'+(x.now?' now':'')+'">'+x.label+'</div>'+
+      (pct!==null?'<div class="cbarpct">'+pct+'%</div>':'')+'</div>';
+  });
+  return '<div class="statrow"><p class="statlabel">월별 받은 '+unit+' (흐릴수록 아직 먼 목표, 출석할수록 진해져요)</p><div class="chartwrap">'+bars+'</div></div>';
+}
+function statsBlock(){
+  var units=unitsUsed();
+  if(!units.length)return '';
+  var h='<details class="bk"><summary>전체 통계</summary><div class="stats">';
+  units.forEach(function(u){h+=statChart(u);});
+  h+='<p class="statnote">예상은 지금 진행 중인 목표를 매일 출석해서 기한 안에 채운다고 가정한 값이에요.</p></div></details>';
+  return h;
+}
+function todaysPayoutFor(g){
+  if(!hasGoals(g))return null;
+  var t=todayStr(),pi=attendedInfo(g),already=isChecked(t,g.id);
+  var effTotal=already?pi.total:pi.total+1,prevTotal=already?pi.total-1:pi.total;
+  var found=null;
+  goalsOf(g).forEach(function(go){
+    if(go.claimed)return;
+    if(go.due&&go.due<t)return;
+    if(prevTotal<go.days&&effTotal>=go.days){
+      if(!go.due||t<=go.due){
+        if(!found||go.days<found.days)found=go;
+      }
+    }
+  });
+  return found;
+}
+function todaySummaryBlock(gs){
+  var rows='';
+  gs.filter(hasGoals).forEach(function(g){
+    var found=todaysPayoutFor(g);
+    if(found)rows+='<div class="tsrow"><span class="tsname">'+esc(g.name)+'</span><span class="tsamt">출석하면 '+fmt(found.reward)+g.unit+'</span></div>';
+  });
+  if(!rows)return '';
+  return '<div class="todaysum">'+rows+'</div>';
+}
+function goalBlock(g){
+  if(!hasGoals(g))return '';
+  var f=focusGoal(g,attendedInfo(g));
+  if(!f)return '<div class="goal"><span class="gtxt">진행 중인 목표가 없어요</span></div>';
+  return '<div class="goal">'+goalLine(g,f.goal,f.gs,false)+'</div>';
+}
+function setClaim(gid,goalId,on){
+  var g=gameById(gid),go=null;
+  if(!g||!g.goals)return;
+  g.goals.forEach(function(x){if(x.id===goalId)go=x;});
+  if(!go)return;
+  go.claimed=on;go.claimedOn=on?todayStr():'';
+  if(on)addClaimToBalance(g,go);else reverseClaimBalance(go);
+  changed('meta');
+  if(on)showToast(fmt(go.reward)+g.unit+' 수령 체크했어요',function(){setClaim(gid,goalId,false);});
+  else hideToast();
+  refresh();
+  if(on&&!g.archived&&g.goals.length&&g.goals.every(function(x){return x.claimed;})){
+    S.hideSuggest={gid:g.id};
+    renderHideModal();
+  }
+}
+function sanitizeGoals(list){
+  var out=[];
+  if(!Array.isArray(list))return out;
+  list.forEach(function(x){
+    if(!x)return;
+    var days=parseInt(x.days,10),rw=Number(x.reward);
+    if(!(days>=1)||!isFinite(rw)||!(rw>0))return;
+    out.push({
+      id:String(x.id||gid_()),days:Math.min(days,9999),reward:Math.round(rw*100)/100,
+      due:/^\d{4}-\d{2}-\d{2}$/.test(x.due)?x.due:'',
+      claimed:!!x.claimed,claimedOn:/^\d{4}-\d{2}-\d{2}$/.test(x.claimedOn)?x.claimedOn:'',
+      ledgerId:String(x.ledgerId||'')
+    });
+  });
+  return out;
+}
+function sanitizeLedger(list){
+  var out=[];
+  if(!Array.isArray(list))return out;
+  list.forEach(function(x){
+    if(!x)return;
+    var amt=Number(x.amount);
+    if(!isFinite(amt)||amt<0)return;
+    if(x.kind!=='manual'&&!(amt>0))return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(x.date))return;
+    if(['claim','pending','withdraw','manual'].indexOf(x.kind)<0)return;
+    var e={id:String(x.id||gid_()),kind:x.kind,date:x.date,amount:Math.round(amt*100)/100,label:String(x.label||'').slice(0,40)};
+    if(x.kind==='pending'){
+      e.unlockDate=/^\d{4}-\d{2}-\d{2}$/.test(x.unlockDate)?x.unlockDate:x.date;
+      e.settled=!!x.settled;
+      if(e.settled&&/^\d{4}-\d{2}-\d{2}$/.test(x.settledOn))e.settledOn=x.settledOn;
+    }
+    if(x.kind==='withdraw')e.dest=String(x.dest||'').slice(0,20);
+    out.push(e);
+  });
+  return out;
+}
+function sanitize(obj){
+  if(!obj||!Array.isArray(obj.games)||!obj.days||typeof obj.days!=='object')return null;
+  var games=[],days={},k,gid;
+  obj.games.forEach(function(g){
+    if(g&&g.id&&g.name){
+      games.push({
+        id:String(g.id),name:String(g.name).slice(0,20),
+        unit:(g.unit==='원'||g.unit==='P')?g.unit:'',
+        color:/^#[0-9a-fA-F]{6}$/.test(g.color)?g.color:COLORS[0],
+        memo:String(g.memo||'').slice(0,100),archived:!!g.archived,archivedOn:(/^\d{4}-\d{2}-\d{2}$/.test(g.archivedOn)?g.archivedOn:''),created:String(g.created||''),
+        start:/^\d{4}-\d{2}-\d{2}$/.test(g.start)?g.start:'',goals:sanitizeGoals(g.goals),base:Math.max(0,parseInt(g.base,10)||0)
+      });
+    }
+  });
+  for(k in obj.days){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&obj.days[k]&&typeof obj.days[k]==='object'){
+      var o={};
+      for(gid in obj.days[k]){var n=Number(obj.days[k][gid]);if(isFinite(n)&&n>=0)o[gid]=n;}
+      if(Object.keys(o).length)days[k]=o;
+    }
+  }
+  var cb=Number(obj.cashBalance),pa=Number(obj.pendAdj);
+  return {games:games,days:days,seed:(obj.seed==='v1'||obj.seed==='v2')?obj.seed:'',ledger:sanitizeLedger(obj.ledger),
+    cashBalance:(isFinite(cb)&&cb>=0)?Math.round(cb*100)/100:0,
+    pendAdj:isFinite(pa)?Math.round(pa*100)/100:0};
+}
+
+/* ---------- persistence: local + optional account storage ---------- */
+var D={col:null,synced:false,pending:{},timer:null,writing:false,mode:'local'};
+
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify({games:S.games,days:S.days,seed:S.seed,ledger:S.ledger,cashBalance:S.cashBalance,pendAdj:S.pendAdj}));}catch(e){}}
+function loadLocal(){
+  try{
+    var raw=localStorage.getItem(LS);
+    if(raw){var d=sanitize(JSON.parse(raw));if(d){S.games=d.games;S.days=d.days;S.seed=d.seed;S.ledger=d.ledger;S.cashBalance=d.cashBalance;S.pendAdj=d.pendAdj;return true;}}
+  }catch(e){}
+  return false;
+}
+function hasData(){return S.games.length>0||Object.keys(S.days).length>0;}
+
+function changed(key){
+  saveLocal();
+  if(D.col&&D.synced){D.pending[key]=1;schedule();}
+}
+function schedule(){clearTimeout(D.timer);D.timer=setTimeout(flush,500);}
+function bodyFor(k){
+  if(k==='meta')return {v:1,games:S.games,seed:S.seed||'',ledger:S.ledger,cashBalance:S.cashBalance,pendAdj:S.pendAdj||0};
+  var yr=k.slice(1),days={},d;
+  for(d in S.days){if(d.indexOf(yr+'-')===0)days[d]=S.days[d];}
+  return {v:1,days:days};
+}
+function flush(){
+  if(!D.col)return;
+  if(D.writing){schedule();return;}
+  var keys=Object.keys(D.pending);
+  if(!keys.length)return;
+  D.pending={};D.writing=true;
+  var chain=Promise.resolve();
+  keys.forEach(function(k){chain=chain.then(function(){return D.col.doc(k).set(bodyFor(k));});});
+  chain.then(function(){
+    D.writing=false;setMode('cloud');
+    if(Object.keys(D.pending).length)schedule();
+  }).catch(function(){
+    D.writing=false;
+    keys.forEach(function(k){D.pending[k]=1;});
+    setMode('local');
+  });
+}
+function onSnap(snap){
+  if(snap.metadata&&snap.metadata.fromCache&&snap.empty)return;
+  if(D.writing||Object.keys(D.pending).length)return;
+  var remote={games:null,days:{},any:false,seed:'',ledger:null,cashBalance:undefined,pendAdj:undefined};
+  snap.docs.forEach(function(d){
+    var data=d.data();if(!data)return;
+    remote.any=true;
+    if(d.id==='meta'){if(Array.isArray(data.games))remote.games=data.games;remote.seed=data.seed||'';if(Array.isArray(data.ledger))remote.ledger=data.ledger;remote.cashBalance=data.cashBalance;remote.pendAdj=data.pendAdj;}
+    else if(d.id.charAt(0)==='y'&&data.days){for(var k in data.days){remote.days[k]=data.days[k];}}
+  });
+  if(!D.synced){
+    D.synced=true;
+    if(!remote.any){
+      if(hasData()){
+        D.pending.meta=1;
+        var yrs={},k;
+        for(k in S.days){yrs['y'+k.slice(0,4)]=1;}
+        for(k in yrs){D.pending[k]=1;}
+        schedule();
+      }
+      setMode('cloud');
+      ensureSeed();
+      return;
+    }
+  }
+  if(!remote.any)return;
+  var clean=sanitize({games:remote.games||S.games,days:remote.days,seed:remote.seed,ledger:remote.ledger||S.ledger,cashBalance:remote.cashBalance===undefined?S.cashBalance:remote.cashBalance,pendAdj:remote.pendAdj===undefined?S.pendAdj:remote.pendAdj});
+  if(!clean)return;
+  if(JSON.stringify([clean.games,clean.days,clean.seed,clean.ledger,clean.cashBalance,clean.pendAdj])!==JSON.stringify([S.games,S.days,S.seed,S.ledger,S.cashBalance,S.pendAdj])){
+    S.games=clean.games;S.days=clean.days;S.seed=clean.seed;S.ledger=clean.ledger;S.cashBalance=clean.cashBalance;S.pendAdj=clean.pendAdj;saveLocal();render();checkPendingRelease();
+  }
+  setMode('cloud');
+  ensureSeed();
+}
+var SEED=[
+  {id:'seed-1',name:'게임 1',base:0,old:1,goals:[[7,226,90],[15,2266,90],[30,5066,90],[60,8000,90],[90,15333,90]]},
+  {id:'seed-2',name:'게임 2',base:1,old:2,goals:[[3,59,4],[7,239,13],[14,600,19],[30,2400,29]]},
+  {id:'seed-3',name:'게임 3',base:6,old:7,goals:[[14,1466,14],[30,5733,24]]}
+];
+var STANDALONE=true;
+function ensureSeed(){
+  if(STANDALONE){S.seed='v2';return;}
+  if(S.seed==='v2')return;
+  var t=todayStr(),fresh=S.seed!=='v1';
+  S.seed='v2';
+  if(fresh){
+    SEED.forEach(function(d,i){
+      if(gameById(d.id))return;
+      S.games.push({
+        id:d.id,name:d.name,unit:'원',color:COLORS[i%COLORS.length],memo:'',archived:false,created:t,start:t,base:d.base,
+        goals:d.goals.map(function(x,j){return {id:d.id+'-o'+j,days:x[0],reward:x[1],due:addDays(t,x[2]),claimed:false,claimedOn:''};})
+      });
+    });
+  }else{
+    SEED.forEach(function(d){
+      var g=gameById(d.id);
+      if(g&&g.base===d.old)g.base=d.base;
+    });
+  }
+  S.games.forEach(function(g){
+    var i=OLD_COLORS.indexOf(g.color);
+    if(i>=0)g.color=COLORS[i];
+  });
+  SEED.forEach(function(d){
+    if(gameById(d.id)&&!isChecked(t,d.id))setRec(t,d.id,0);
+  });
+  changed('meta');
+  render();
+}
+function connectDb(){
+  if(!window.claude||!window.claude.use){ensureSeed();return;}
+  Promise.all([window.claude.use('db'),window.claude.use('user')]).then(function(r){
+    var db=r[0],user=r[1];
+    if(!db||!user){ensureSeed();return;}
+    return user.id().then(function(id){
+      if(!id){ensureSeed();return;}
+      var col=db.collection('data/users/'+id);
+      D.col=col;
+      col.onSnapshot(onSnap,function(){D.col=null;setMode('local');ensureSeed();});
+      setTimeout(function(){if(!D.synced)ensureSeed();},8000);
+    });
+  }).catch(function(){ensureSeed();});
+}
+function statusText(){
+  return D.mode==='cloud'
+    ?'내 계정에 저장 중이에요. 다른 기기에서 열어도 같은 기록이 보여요.'
+    :'이 기기의 브라우저에 저장 중이에요. 브라우저 데이터를 지우면 기록도 사라지니 백업해 두세요.';
+}
+function setMode(m){
+  D.mode=m;
+  var el=$('#savestat');if(el)el.textContent=statusText();
+}
+
+/* ---------- font size ---------- */
+var FSKEY='apptech-attendance-fontsize';
+var FSMIN=80,FSMAX=160;
+function loadFontSize(){
+  var v=1;
+  try{var raw=localStorage.getItem(FSKEY);if(raw)v=parseFloat(raw)||1;}catch(e){}
+  document.documentElement.style.setProperty('--fs',v);
+  return v;
+}
+function setFontSize(v){
+  document.documentElement.style.setProperty('--fs',v);
+  try{localStorage.setItem(FSKEY,String(v));}catch(e){}
+}
+function fsizeBox(){
+  var pct=Math.round((parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs'))||1)*100);
+  return '<details class="bk fsizebox"><summary>글씨 크기</summary>'+
+    '<div class="fsizeWrap">'+
+    '<input type="range" min="'+FSMIN+'" max="'+FSMAX+'" step="1" value="'+pct+'" id="fsizeRange" aria-label="글씨 크기, 스와이프해서 조절">'+
+    '<div class="fsizeTicks"><span>'+FSMIN+'%</span><span>'+FSMAX+'%</span></div>'+
+    '<div class="fsizeLabel" id="fsizeLabel">'+pct+'%</div>'+
+    '</div></details>';
+}
+
+/* ---------- quick convert amounts (local-only) ---------- */
+var QAKEY='apptech-attendance-quickamts';
+function loadQuickAmts(){
+  var v=[5000,10000,30000,50000];
+  try{
+    var raw=localStorage.getItem(QAKEY);
+    if(raw){
+      var arr=JSON.parse(raw);
+      if(Array.isArray(arr)&&arr.length)v=arr.filter(function(n){return typeof n==='number'&&isFinite(n)&&n>0;});
+    }
+  }catch(e){}
+  return v;
+}
+function saveQuickAmts(){try{localStorage.setItem(QAKEY,JSON.stringify(S.quickAmts));}catch(e){}}
+
+/* ---------- toast ---------- */
+var toastTimer;
+function showToast(msg,undo){
+  var el=$('#toast');
+  S.undo=undo||null;
+  el.innerHTML='<span>'+esc(msg)+'</span>'+(undo?'<button data-act="undo">되돌리기</button>':'');
+  el.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(hideToast,4000);
+}
+function hideToast(){$('#toast').classList.remove('show');}
+
+/* ---------- views ---------- */
+function activeGames(){return S.games.filter(function(g){return !g.archived;});}
+/* 완료한 게임은 완료한 날까지만 달력에 보여요 (옛 데이터는 마지막 기록 날짜까지) */
+function gameEnd(g){
+  if(!g.archived)return '';
+  if(g.archivedOn)return g.archivedOn;
+  var last='',k;
+  for(k in S.days){if(S.days[k][g.id]!==undefined&&k>last)last=k;}
+  if(g.goals)g.goals.forEach(function(go){if(go.claimed&&go.claimedOn&&go.claimedOn>last)last=go.claimedOn;});
+  return last||g.start||g.created||'';
+}
+function shownOn(g,ds){return !g.archived||ds<=gameEnd(g);}
+function calGames(y,m){
+  var first=y+'-'+pad(m+1)+'-01';
+  return S.games.filter(function(g){return !g.archived||gameEnd(g)>=first;});
+}
+
+function monthTotalsHtml(y,m){
+  var by={'원':0,'P':0};
+  S.games.forEach(function(g){if(g.unit)by[g.unit]+=monthStats(g.id,y,m).sum;});
+  var out='';
+  ['원','P'].forEach(function(u){if(by[u]>0)out+='<b>'+fmt(by[u])+u+'</b>';});
+  return out?'<div class="mt"><span>이번 달 받은 금액</span>'+out+'</div>':'';
+}
+
+function shortMD(ds){var p=parseDate(ds);return (p.getMonth()+1)+'/'+p.getDate();}
+function cardMeta(g,t,on,v,sk){
+  if(hasGoals(g)){
+    var f=focusGoal(g,attendedInfo(g));
+    if(!f)return '<span>목표를 모두 마쳤어요</span>';
+    if(f.gs.st==='done')return '<span>'+f.goal.days+'일 달성</span>';
+    var pc=Math.min(f.gs.pc,f.goal.days),pct=Math.round(pc/f.goal.days*100),eta=addDays(t,f.goal.days-pc);
+    return pc+'/'+f.goal.days+'일<div class="rbar"><i style="width:'+pct+'%"></i></div><b>'+shortMD(eta)+'</b>';
+  }
+  if(g.unit){
+    if(!on)return '';
+    return '<button class="cpill'+(v>0?'':' mute')+'" data-act="amount" data-g="'+g.id+'" aria-label="'+esc(g.name)+' 오늘 받은 금액 입력">'+(v>0?'+'+fmt(v)+g.unit:'금액 입력')+'</button>';
+  }
+  return sk>1?'연속 '+sk+'일':'';
+}
+function rowHtml(g,t,y,m){
+  var on=isChecked(t,g.id),v=rec(t,g.id)||0,sk=streak(g.id),ov='';
+  if(hasGoals(g)){
+    var fg0=focusGoal(g,attendedInfo(g));
+    if(fg0&&fg0.gs.st==='done'){
+      ov='<button class="ov" data-act="claimcard" data-g="'+g.id+'" data-goal="'+fg0.goal.id+'" data-amt="'+esc(fmt(fg0.goal.reward)+g.unit)+'" aria-label="'+esc(g.name)+' '+fg0.goal.days+'일 목표 수령하기"><span class="gf">🎁</span><span class="am">+'+esc(fmt(fg0.goal.reward)+g.unit)+'</span></button>';
+    }
+  }
+  return '<article class="row'+(on?' on':'')+'" style="'+colorStyle(g.color)+'" data-g="'+g.id+'">'+
+    '<div class="rname">'+esc(g.name)+'</div>'+
+    '<div class="rbot"><div class="rmt">'+cardMeta(g,t,on,v,sk)+'</div><button class="stamp'+(on?' on':'')+'" data-act="toggle" data-g="'+g.id+'" data-pop="'+g.id+'|'+t+'" aria-pressed="'+on+'" aria-label="'+esc(g.name)+' 오늘 출석 체크">출석</button></div>'+ov+'</article>';
+}
+
+function viewToday(){
+  var t=todayStr(),d=new Date(),gs=activeGames(),done=0;
+  gs.forEach(function(g){if(isChecked(t,g.id))done++;});
+  var msg=!gs.length?'등록한 게임이 없어요':(done===gs.length?'오늘 '+gs.length+'개 모두 출석했어요':'오늘 '+done+'/'+gs.length+' 출석');
+  var cl=claimable(gs);if(cl)msg+=' · 수령 가능 '+cl+'개';
+  var h='<header class="top"><div><h1 class="date">'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DOW[d.getDay()]+'요일</h1><p class="sub">'+msg+'</p></div>'+
+    monthTotalsHtml(d.getFullYear(),d.getMonth())+'</header>';
+  if(!gs.length){
+    return h+'<div class="empty"><p class="disp">첫 게임을 등록해 보세요</p><p>출석 보상을 주는 앱을 추가하면 여기서 하루에 한 번씩 도장을 찍을 수 있어요.</p><button class="btn" data-act="addGame">게임 추가</button></div>';
+  }
+  h+=todaySummaryBlock(gs);
+  h+='<div class="list cards">';
+  gs.forEach(function(g){h+=rowHtml(g,t,d.getFullYear(),d.getMonth());});
+  return h+'</div>';
+}
+
+function anyClaimOnDate(ds,gidFilter){
+  var found=false;
+  S.games.forEach(function(g){
+    if(found||!hasGoals(g))return;
+    if(gidFilter&&g.id!==gidFilter)return;
+    g.goals.forEach(function(go){if(go.claimed&&go.claimedOn===ds)found=true;});
+  });
+  return found;
+}
+function anyProjectedOnDate(ds,gidFilter){
+  var t=todayStr(),found=false;
+  S.games.forEach(function(g){
+    if(found||g.archived||!hasGoals(g))return;
+    if(gidFilter&&g.id!==gidFilter)return;
+    var pi=attendedInfo(g);
+    goalsOf(g).forEach(function(go){
+      if(found||go.claimed)return;
+      var remain=Math.max(0,go.days-pi.total),eta=addDays(t,remain);
+      if(go.due&&eta>go.due)return;
+      if(eta===ds)found=true;
+    });
+  });
+  return found;
+}
+function viewCal(){
+  var y=S.cal.y,m=S.cal.m,t=todayStr();
+  var first=new Date(y,m,1).getDay(),dim=new Date(y,m+1,0).getDate(),i,d;
+  var fg=S.filter==='all'?null:gameById(S.filter);
+  var cgs=calGames(y,m),ym=y+'-'+pad(m+1);
+  var chipGs=cgs.filter(function(g){return !g.archived||gameEnd(g).slice(0,7)>ym;});
+  if(S.filter!=='all'&&(!fg||chipGs.indexOf(fg)<0)){S.filter='all';fg=null;}
+  var h='<div class="calhead"><h1 class="disp">'+y+'년 '+(m+1)+'월</h1><div class="calctl">'+
+    '<button class="iconbtn txt" data-act="thisMonth">오늘</button>'+
+    '<button class="iconbtn" data-act="prev" aria-label="이전 달">‹</button>'+
+    '<button class="iconbtn" data-act="next" aria-label="다음 달">›</button></div></div>';
+  h+=monthTotalsHtml(y,m);
+  if(!S.games.length){
+    return h+'<div class="empty"><p class="disp">기록할 게임이 없어요</p><p>게임을 먼저 추가하면 날짜별 출석이 달력에 쌓여요.</p><button class="btn" data-act="addGame">게임 추가</button></div>';
+  }
+  h+='<div class="chips" role="group" aria-label="게임 선택"><button class="chip" data-act="filter" data-f="all" aria-pressed="'+(S.filter==='all')+'">전체</button>';
+  chipGs.forEach(function(g){
+    h+='<button class="chip" style="'+colorStyle(g.color)+'" data-act="filter" data-f="'+g.id+'" aria-pressed="'+(S.filter===g.id)+'"><i></i>'+esc(g.name)+'</button>';
+  });
+  h+='</div><div class="grid">';
+  for(i=0;i<7;i++)h+='<div class="dow'+(i===0?' sun':'')+'">'+DOW[i]+'</div>';
+  for(i=0;i<first;i++)h+='<div></div>';
+  for(d=1;d<=dim;d++){
+    var ds=y+'-'+pad(m+1)+'-'+pad(d),wd=(first+d-1)%7,future=ds>t,inner='',cnt=0;
+    if(fg){
+      var v=shownOn(fg,ds)?rec(ds,fg.id):undefined;
+      if(v!==undefined){
+        inner='<span class="mini" style="'+colorStyle(fg.color)+'"></span>'+(v>0?'<span class="amt-s">'+fmt(v)+'</span>':'');
+        cnt=1;
+      }
+    }else{
+      var dots='';
+      cgs.forEach(function(g){if(shownOn(g,ds)&&isChecked(ds,g.id)){cnt++;dots+='<i class="dot" style="'+colorStyle(g.color)+'"></i>';}});
+      if(dots)inner='<span class="dots">'+dots+'</span>';
+    }
+    var gidF=fg?fg.id:null;
+    var claimedFlag=anyClaimOnDate(ds,gidF);
+    var projFlag=!claimedFlag&&ds>=t&&anyProjectedOnDate(ds,gidF);
+    h+='<button class="day'+(ds===t?' today':'')+(claimedFlag?' claimed':'')+(projFlag?' proj':'')+'" data-act="day" data-d="'+ds+'"'+(future?' disabled':'')+' aria-label="'+(m+1)+'월 '+d+'일, 출석 '+cnt+'개'+(claimedFlag?', 돈 받은 날':projFlag?', 받을 것으로 예상되는 날':'')+'"><span class="dn'+(wd===0?' sun':'')+'">'+d+'</span>'+inner+'</button>';
+  }
+  h+='</div><p class="note">보라 실선은 돈을 받은 날, 보라 점선은 지금 추세로 앞으로 받을 것 같은 날이에요.</p>';
+  var rows='';
+  cgs.forEach(function(g){
+    if(fg&&fg.id!==g.id)return;
+    var st=monthStats(g.id,y,m);
+    rows+='<div class="sumrow" style="'+colorStyle(g.color)+'"><i></i><span class="n">'+esc(g.name)+'</span><span class="d">'+st.days+'일</span>'+
+      '<span class="m">'+(g.unit?fmt(st.sum)+g.unit:'')+'</span></div>';
+  });
+  if(rows)h+='<div class="sum">'+rows+'</div>';
+  h+='<p class="note">날짜를 누르면 그날 기록을 고치거나 금액을 입력할 수 있어요.</p>';
+  return h;
+}
+
+/* ---------- cash balance / pending ledger ---------- */
+var HOLD_THRESHOLD=1000,HOLD_DAYS=7;
+function addClaimToBalance(g,go){
+  if(!g||g.unit!=='원'||!(go.reward>0))return;
+  var amt=go.reward,id=gid_();
+  if(amt>=HOLD_THRESHOLD){
+    S.ledger.push({id:id,kind:'pending',date:todayStr(),amount:amt,label:g.name+' 목표 수령',unlockDate:addDays(todayStr(),HOLD_DAYS),settled:false});
+  }else{
+    S.cashBalance=(S.cashBalance||0)+amt;
+    S.ledger.push({id:id,kind:'claim',date:todayStr(),amount:amt,label:g.name+' 목표 수령'});
+  }
+  go.ledgerId=id;
+}
+function reverseClaimBalance(go){
+  if(!go||!go.ledgerId)return;
+  var i=S.ledger.findIndex(function(e){return e.id===go.ledgerId;});
+  if(i<0){go.ledgerId='';return;}
+  var e=S.ledger[i];
+  if(e.kind==='claim'||(e.kind==='pending'&&e.settled))S.cashBalance=Math.max(0,(S.cashBalance||0)-e.amount);
+  S.ledger.splice(i,1);
+  normPendAdj();
+  go.ledgerId='';
+}
+function checkPendingRelease(){
+  var t=todayStr(),released=[];
+  S.ledger.forEach(function(e){
+    if(e.kind==='pending'&&!e.settled&&e.unlockDate<=t){
+      e.settled=true;e.settledOn=t;
+      S.cashBalance=(S.cashBalance||0)+e.amount;
+      released.push(e);
+    }
+  });
+  if(released.length){normPendAdj();changed('meta');S.assetNotify=true;}
+  return released;
+}
+function pendingBase(){
+  var s=0;S.ledger.forEach(function(e){if(e.kind==='pending'&&!e.settled)s+=e.amount;});
+  return s;
+}
+/* 보류 금액 = 목표 수령 보류분 + 직접 수정으로 생긴 보정값(pendAdj). 사용 가능 금액을 고치면 보정값이 바뀌어 보류가 자동 계산돼요 */
+function pendingSum(){
+  return Math.max(0,Math.round((pendingBase()+(S.pendAdj||0))*100)/100);
+}
+function normPendAdj(){
+  var b=pendingBase();
+  if((S.pendAdj||0)<-b)S.pendAdj=-b;
+}
+function monthSum(kind,ym){
+  var s=0;S.ledger.forEach(function(e){if(e.kind===kind&&e.date.slice(0,7)===ym)s+=e.amount;});
+  return s;
+}
+function viewGames(){
+  var tot={'원':0,'P':0},pot={'원':0,'P':0},days=0,h,potout='',totout='';
+  S.games.forEach(function(g){var s=totalStats(g.id);days+=s.days;if(g.unit)tot[g.unit]+=s.sum;});
+  ['원','P'].forEach(function(u){
+    if(tot[u]>0)totout+='<b>'+fmt(tot[u])+u+'</b>';
+    pot[u]=potentialTotal(u);
+    if(pot[u]>0)potout+='<b>'+fmt(pot[u])+u+'</b>';
+  });
+  h='<header class="top"><div><h1 class="date">게임</h1><p class="sub">'+S.games.length+'개 · 누적 출석 '+days+'일</p></div>'+
+    '<button class="btn sm" data-act="addGame">+ 게임 추가</button></header>';
+  if(totout||potout){
+    h+='<div class="tot">';
+    if(totout)h+='<span>지금까지 받은 금액</span>'+totout;
+    if(potout&&(pot['원']>tot['원']||pot['P']>tot['P']))h+='<div class="potline"'+(totout?'':' style="padding-top:0;margin-top:0;border-top:0"')+'><span>지금 목표를 다 채우면</span>'+potout+'</div>';
+    h+='</div>';
+  }
+  if(!S.games.length){
+    h+='<div class="empty"><p class="disp">아직 게임이 없어요</p><p>이름과 보상 단위만 정하면 바로 쓸 수 있어요.</p></div>';
+  }else{
+    var gameCardHtml=function(g){
+      var st=totalStats(g.id),sk=streak(g.id),gl='';
+      var meta=g.unit?('총 '+st.days+'일 · 누적 '+fmt(st.sum)+g.unit):('총 '+st.days+'일 · 출석만 기록');
+      if(sk>1)meta+=' · 연속 '+sk+'일';
+      var pct=0,claimedN=0,claimedHtml='';
+      if(hasGoals(g)){
+        var pi=attendedInfo(g),last=goalsOf(g).slice(-1)[0];
+        pct=last?Math.round(Math.min(1,pi.total/last.days)*100):100;
+        goalsOf(g).forEach(function(go){
+          var gs=goalState(go,pi);
+          if(gs.st==='claimed'){claimedN++;claimedHtml+=goalLine(g,go,gs,true);}
+          else gl+=goalLine(g,go,gs,true);
+        });
+      }
+      var showClaimed=!!S.expandClaimed[g.id];
+      if(claimedN){
+        gl+='<button class="linkbtn claimtoggle" data-act="toggleClaimed" data-g="'+g.id+'">'+(showClaimed?'받은 내역 숨기기':'받은 내역 보기 ('+claimedN+')')+'</button>';
+        if(showClaimed)gl+=claimedHtml;
+      }
+      var gi=S.games.indexOf(g);
+      return '<div class="gcard'+(g.archived?' done':'')+'" style="'+colorStyle(g.color)+'"><div class="gtophead">'+
+        '<button class="ghead" data-act="editGame" data-g="'+g.id+'">'+
+        '<span class="gname">'+esc(g.name)+(g.archived?'<span class="tag done">완료</span>':'')+(hasGoals(g)?'<span class="pctbadge">'+pct+'%</span>':'')+'</span>'+
+        '<span class="gmeta">'+meta+'</span>'+(g.memo?'<span class="gmemo">'+esc(g.memo)+'</span>':'')+'</button>'+
+        '<div class="ordbar"><button data-act="moveUp" data-g="'+g.id+'" aria-label="위로"'+(gi===0?' disabled':'')+'>▲</button>'+
+        '<button data-act="moveDown" data-g="'+g.id+'" aria-label="아래로"'+(gi===S.games.length-1?' disabled':'')+'>▼</button></div></div>'+
+        (gl?'<div class="glist">'+gl+'</div>':'')+'</div>';
+    };
+    var activeList=S.games.filter(function(g){return !g.archived;});
+    var doneList=S.games.filter(function(g){return g.archived;});
+    h+='<div class="list">';
+    if(doneList.length)h+='<div class="secTitle">진행중</div>';
+    activeList.forEach(function(g){h+=gameCardHtml(g);});
+    h+='</div>';
+    if(doneList.length){
+      h+='<button class="btn ghost sm" style="margin-top:12px" data-act="toggleArch">'+(S.showArch?'완료 숨기기 ▴':'완료 '+doneList.length+'개 보기 ▾')+'</button>';
+      if(S.showArch){
+        h+='<div class="list" style="margin-top:10px">';
+        doneList.forEach(function(g){h+=gameCardHtml(g);});
+        h+='</div>';
+      }
+    }
+  }
+  h+=statsBlock();
+  h+=fsizeBox();
+  h+='<details class="bk"><summary>백업과 복원</summary>'+
+    '<p class="hint">기록을 글자로 복사해 두었다가, 다른 기기나 브라우저에서 붙여 넣어 복원할 수 있어요.</p>'+
+    '<button class="btn ghost" data-act="copyBackup">기록 복사</button>'+
+    '<textarea id="bk" class="inp" rows="4" spellcheck="false" placeholder="복원할 내용을 여기에 붙여 넣으세요"></textarea>'+
+    '<button class="btn ghost" id="rbtn" data-act="restoreBackup">붙여 넣은 내용으로 복원</button></details>'+
+    '<p id="savestat" class="hint">'+statusText()+'</p>';
+  return h;
+}
+
+function dDay(ds){
+  var diff=Math.round((parseDate(ds)-parseDate(todayStr()))/86400000);
+  return diff<0?0:diff;
+}
+function destKind(d){
+  if(d==='네이버페이')return 'naver';
+  if(d==='올리브영 상품권'||d==='올리브영')return 'olive';
+  return 'etc';
+}
+function ledgerRowHtml(e){
+  var date=fmtMD(e.date),tx='',ic='',cls='',amt='',chip='';
+  if(e.kind==='claim'){
+    cls='add';ic='+';tx='<b>'+esc(e.label)+'</b><span>'+date+' 수령</span>';amt='+'+fmt(e.amount)+'원';
+  }else if(e.kind==='pending'){
+    if(e.settled){
+      cls='add';ic='✓';tx='<b>'+esc(e.label)+'</b><span>'+date+' 수령 · '+fmtMD(e.settledOn)+' 해제됨</span>';amt='+'+fmt(e.amount)+'원';
+    }else{
+      cls='lock';ic='🔒';tx='<b>'+esc(e.label)+'</b><span>'+date+' 수령</span>';amt=fmt(e.amount)+'원';
+      chip='<span class="dchip">D-'+dDay(e.unlockDate)+'</span>';
+    }
+  }else if(e.kind==='withdraw'){
+    cls='sub';ic='−';
+    var dk=destKind(e.dest);
+    tx='<b><span class="destbadge '+dk+'">'+esc(e.dest||'기타')+'</span>전환</b><span>'+date+'</span>';
+    amt='-'+fmt(e.amount)+'원';
+  }else{
+    cls='set';ic='✎';tx='<b>보유 금액 직접 수정</b><span>'+date+'</span>';amt=fmt(e.amount)+'원으로';
+  }
+  return '<div class="lrow '+cls+'"><span class="ic">'+ic+'</span><div class="tx">'+tx+'</div>'+chip+'<span class="amt">'+amt+'</span></div>';
+}
+function viewAsset(){
+  var avail=S.cashBalance||0,pend=pendingSum(),total=avail+pend;
+  var pct=total>0?Math.round(avail/total*100):100;
+  var ym=todayStr().slice(0,7);
+  var gotM=monthSum('claim',ym)+(function(){var s=0;S.ledger.forEach(function(e){if(e.kind==='pending'&&e.date.slice(0,7)===ym)s+=e.amount;});return s;})();
+  var convM=monthSum('withdraw',ym);
+  var h='<header class="top"><div><h1 class="date">자산</h1><p class="sub">받은 보상과 전환 내역을 모아 봐요</p></div></header>';
+  h+='<div class="tot">';
+  if(S.editingBalance){
+    h+='<div class="assetBig"><span>전체 보유</span>'+
+      '<div class="assetEditRow"><input id="f-bal" class="inp" type="text" inputmode="decimal" value="'+fmt(total)+'"></div>'+
+      '<div class="btnrow" style="margin-top:10px"><button class="btn ghost sm" data-act="cancelBalEdit">취소</button><button class="btn sm" data-act="saveBalEdit">저장</button></div></div>';
+  }else{
+    h+='<div class="assetBig"><span>전체 보유</span><div class="wrap"><b>'+fmt(total)+'원</b><button class="linkbtn" data-act="editBalance">✎ 수정</button></div></div>'+
+      '<div class="ptrack"><div class="pok" style="width:'+pct+'%"></div><div class="plk" style="width:'+(100-pct)+'%"></div></div>';
+    if(S.editingAvail){
+      h+='<div class="plegend avail-edit"><span class="ok avail-editwrap">사용 가능 <input id="f-avail" class="availinp" type="text" inputmode="decimal" value="'+fmt(avail)+'"><button class="availok" data-act="saveAvailEdit" aria-label="저장">✓</button><button class="availx" data-act="cancelAvailEdit" aria-label="취소">×</button></span><span class="lk">보류 <span id="pendLive">'+fmt(pend)+'</span>원</span></div>';
+    }else{
+      h+='<div class="plegend"><button class="linklike ok" data-act="editAvail">사용 가능 '+fmt(avail)+'원 ✎</button><span class="lk">보류 '+fmt(pend)+'원</span></div>';
+    }
+  }
+  h+='</div>';
+  if(S.quickEditMode)h+='<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="linkbtn" data-act="doneQuickEdit" style="padding-left:0">편집 완료</button></div>';
+  h+='<div class="assetQ">';
+  S.quickAmts.forEach(function(a){
+    if(S.quickEditMode)h+='<button class="editx" data-act="removeQuickAmt" data-amt="'+a+'">'+fmt(a)+'</button>';
+    else h+='<button data-act="quickConvert" data-amt="'+a+'"'+(a>avail?' disabled':'')+'>'+fmt(a)+'</button>';
+  });
+  if(!S.quickEditMode)h+='<button class="add" data-act="addQuickAmt">+ 추가</button>';
+  h+='</div>';
+  if(S.addingQuick){
+    h+='<div class="addpop"><input id="f-newquick" class="inp" type="text" inputmode="decimal" placeholder="금액 (예: 7000)">'+
+      '<div class="btnrow"><button class="btn ghost sm" data-act="cancelAddQuick">취소</button><button class="btn sm" data-act="confirmAddQuick">추가</button></div></div>';
+  }
+  if(S.convertConfirm){
+    var cc=S.convertConfirm;
+    h+='<div class="inline-modal"><div class="amt">'+fmt(cc.amt)+'원 전환</div>'+
+      '<div class="row2">'+
+      ['네이버페이','올리브영 상품권','기타'].map(function(name){return '<button data-act="pickConvertDest" data-d="'+name+'"'+(cc.dest===name?' class="sel"':'')+'>'+(name==='올리브영 상품권'?'올리브영':name)+'</button>';}).join('')+
+      '</div>'+
+      '<div class="btnrow" style="margin-top:12px"><button class="btn ghost sm" data-act="cancelConvert">취소</button><button class="btn sm" data-act="confirmConvert"'+(cc.dest?'':' disabled')+'>전환 완료</button></div></div>';
+  }
+  h+='<div class="assetCards">'+
+    '<div class="assetCard"><span>이번 달 받음</span><b style="color:var(--okfg)">+'+fmt(gotM)+'원</b></div>'+
+    '<div class="assetCard"><span>이번 달 전환</span><b style="color:var(--pendfg)">-'+fmt(convM)+'원</b></div>'+
+  '</div>';
+  if(S.addingPend){
+    h+='<div class="addpop"><div style="font-weight:700;margin-bottom:10px">이미 받은 대기 중 보상 추가</div>'+
+      pendPickerHtml()+
+      '<input id="f-pamt" class="inp" type="text" inputmode="decimal" placeholder="금액 (예: 5733)">'+
+      '<input id="f-pdays" class="inp" type="text" inputmode="numeric" placeholder="며칠 후 사용 가능? (예: 6)">'+
+      '<div class="btnrow"><button class="btn ghost sm" data-act="cancelAddPend">취소</button><button class="btn sm" data-act="confirmAddPend">추가</button></div></div>';
+  }
+  h+='<button class="btn ghost sm" style="width:100%" data-act="toggleAssetDetail">'+(S.assetDetail?'전체 내역 접기 ▴':'전체 내역 보기 ▾')+'</button>';
+  if(S.assetDetail){
+    if(!S.addingPend)h+='<div style="text-align:right;margin-top:8px"><button class="linkbtn" data-act="addPend">+ 이미 받은 대기 보상 추가</button></div>';
+    var list=S.ledger.filter(function(e){return e.kind!=='manual';}).sort(function(a,b){return a.date<b.date?1:(a.date>b.date?-1:0);});
+    if(!list.length)h+='<p class="hint" style="margin-top:10px">아직 내역이 없어요.</p>';
+    else{
+      h+='<div class="ledger">';
+      list.forEach(function(e){h+=ledgerRowHtml(e);});
+      h+='</div>';
+    }
+  }
+  return h;
+}
+
+function render(){
+  var root=$('#view');
+  root.innerHTML=S.tab==='today'?viewToday():(S.tab==='cal'?viewCal():(S.tab==='asset'?viewAsset():viewGames()));
+  var btns=document.querySelectorAll('.nav button'),i;
+  for(i=0;i<btns.length;i++){
+    if(btns[i].getAttribute('data-tab')===S.tab)btns[i].setAttribute('aria-current','page');
+    else btns[i].removeAttribute('aria-current');
+  }
+  if(S.tab==='asset'&&S.assetNotify)S.assetNotify=false;
+  var dot=document.getElementById('assetDot');
+  if(dot)dot.hidden=!S.assetNotify;
+}
+
+/* ---------- sheets ---------- */
+function dayTitle(date){
+  var dt=parseDate(date);
+  return (dt.getMonth()+1)+'월 '+dt.getDate()+'일 '+DOW[dt.getDay()]+'요일'+(date===todayStr()?' · 오늘':'');
+}
+
+function claimedAmountOnDate(g,date){
+  var sum=0;
+  if(g.goals)g.goals.forEach(function(go){if(go.claimed&&go.claimedOn===date)sum+=go.reward;});
+  return sum;
+}
+function sheetDetail(){
+  var g=gameById(S.sheet.gid),close='<div class="btnrow"><button class="btn" data-act="closeSheet">닫기</button></div>';
+  if(!g)return '<div class="grab"></div><p class="hint">게임을 찾을 수 없어요.</p>'+close;
+  var t=todayStr(),d=new Date(),st=monthStats(g.id,d.getFullYear(),d.getMonth()),sk=streak(g.id),week='',i,ds;
+  for(i=6;i>=0;i--){ds=addDays(t,-i);week+='<i class="wd'+(isChecked(ds,g.id)?' on':'')+(i===0?' now':'')+'"></i>';}
+  var h='<div class="grab"></div><h2 class="disp sh-t">'+esc(g.name)+'</h2><p class="sh-s">연속 '+sk+'일 · 이번 달 '+st.days+'일'+(g.unit&&st.sum>0?' · '+fmt(st.sum)+g.unit:'')+'</p>'+
+    '<div style="'+colorStyle(g.color)+';margin-top:10px"><div class="week">'+week+'</div></div>';
+  if(hasGoals(g)){
+    var pi=attendedInfo(g);
+    h+='<div class="goal sgoal" style="'+colorStyle(g.color)+';border-top:0;padding-top:0;margin-top:16px">';
+    goalsOf(g).forEach(function(go){h+=goalLine(g,go,goalState(go,pi),true);});
+    h+='</div>';
+  }
+  return h+close;
+}
+function sheetEntry(){
+  var date=S.sheet.date,gid=S.sheet.gid,list,h;
+  if(gid){var one=gameById(gid);list=one?[one]:[];}
+  else list=S.games.filter(function(g){
+    if(!shownOn(g,date))return false;
+    if(isChecked(date,g.id))return true;
+    if(g.created&&date<g.created)return false;
+    return true;
+  });
+  h='<div class="grab"></div>';
+  if(gid&&list[0]){h+='<h2 class="disp sh-t">'+esc(list[0].name)+'</h2><p class="sh-s">'+dayTitle(date)+'</p>';}
+  else{h+='<h2 class="disp sh-t">'+dayTitle(date)+'</h2><p class="sh-s">도장을 눌러 출석을 바꾸세요.</p>';}
+  if(!list.length)h+='<p class="hint">기록할 게임이 없어요.</p>';
+  list.forEach(function(g){
+    var on=isChecked(date,g.id),v=rec(date,g.id)||0,claimedAmt=hasGoals(g)?claimedAmountOnDate(g,date):0;
+    h+='<div class="erow" style="'+colorStyle(g.color)+'" data-erow="'+g.id+'">'+
+      '<button class="stamp sm'+(on?' on':'')+'" data-act="etoggle" data-g="'+g.id+'" data-pop="'+g.id+'|'+date+'" aria-pressed="'+on+'" aria-label="'+esc(g.name)+' 출석">출석</button>'+
+      '<div class="ename">'+esc(g.name)+'</div>'+
+      (claimedAmt>0?'<span class="eamt-done">+'+fmt(claimedAmt)+g.unit+'</span>':
+        (g.unit&&!hasGoals(g)?'<label class="eamt"><input class="inp" type="text" inputmode="decimal" data-gid="'+g.id+'" value="'+(v>0?v:'')+'" placeholder="0" aria-label="'+esc(g.name)+' 받은 금액"><span>'+g.unit+'</span></label>':''))+
+      '</div>';
+  });
+  h+='<div class="btnrow"><button class="btn" data-act="closeSheet">완료</button></div>';
+  return h;
+}
+
+function goalsEditor(d){
+  if(!d.unit)return '<p class="hint" style="margin-top:14px">보상 단위를 정하면 N일 플레이 목표 보상을 등록할 수 있어요.</p>';
+  var h='<div class="field"><span class="lb">목표 보상 (N일 플레이하면 받는 보상)</span><div class="gedit head"><span>목표 일수</span><span>보상('+d.unit+')</span><span>남은 기한(일)</span><span></span></div>';
+  d.goals.forEach(function(x,i){
+    h+='<div class="gedit">'+
+      '<input class="inp" type="text" inputmode="numeric" data-goalf="days" data-i="'+i+'" value="'+esc(x.days)+'" placeholder="7" aria-label="목표 일수">'+
+      '<input class="inp" type="text" inputmode="decimal" data-goalf="reward" data-i="'+i+'" value="'+esc(x.reward)+'" placeholder="226" aria-label="보상">'+
+      '<input class="inp" type="text" inputmode="numeric" data-goalf="left" data-i="'+i+'" value="'+esc(x.left)+'" placeholder="90" aria-label="남은 기한 일수">'+
+      '<button class="x" data-act="delGoal" data-i="'+i+'" aria-label="목표 삭제">×</button></div>';
+  });
+  h+='<button class="btn ghost sm" data-act="addGoal">+ 목표 추가</button></div>'+
+    '<div class="field"><label for="f-start">출석 집계 시작일</label><input id="f-start" class="inp" type="date" value="'+esc(d.start)+'"><p class="hint" style="margin-top:6px">이 날짜 이후의 출석일이 목표 진행도에 쌓여요.</p></div>'+
+    '<div class="field"><label for="f-base">앱에서 이미 채운 일수</label><input id="f-base" class="inp" type="text" inputmode="numeric" value="'+esc(d.base)+'"><p class="hint" style="margin-top:6px">앱의 진행 막대에 이미 쌓여 있는 일수예요. 시작일 이후 찍는 도장은 여기에 더해져요.</p></div>';
+  return h;
+}
+function sheetGame(){
+  var d=S.sheet.draft,editing=!!S.sheet.gid,h,units=[['원','금액(원)'],['P','포인트(P)'],['','출석만']];
+  h='<div class="grab"></div><h2 class="disp sh-t">'+(editing?'게임 수정':'게임 추가')+'</h2>'+
+    '<div class="field"><label for="f-name">게임 이름</label><input id="f-name" class="inp" maxlength="20" autocomplete="off" value="'+esc(d.name)+'" placeholder="예: 출석 도장 게임"></div>'+
+    '<div class="field"><span class="lb">받는 보상</span><div class="seg" role="group" aria-label="보상 단위">';
+  units.forEach(function(u){h+='<button data-act="pickUnit" data-u="'+u[0]+'" aria-pressed="'+(d.unit===u[0])+'">'+u[1]+'</button>';});
+  h+='</div></div><div class="field"><span class="lb">색상</span><div class="sw" role="group" aria-label="색상">';
+  COLORS.forEach(function(c){h+='<button style="'+colorStyle(c)+'" data-act="pickColor" data-c="'+c+'" aria-pressed="'+(d.color===c)+'" aria-label="색상 '+c+'"></button>';});
+  h+='</div></div>'+goalsEditor(d)+'<div class="field"><label for="f-memo">메모 (선택)</label><textarea id="f-memo" class="inp" rows="2" maxlength="100" placeholder="예: 매일 자정에 초기화, 7일차 보너스">'+esc(d.memo)+'</textarea></div>';
+  if(editing)h+='<div class="field"><label class="chk"><input type="checkbox" id="f-arch"'+(d.archived?' checked':'')+'>오늘 목록에서 숨기기 (기록은 그대로 남아요)</label></div>';
+  h+='<p class="err" id="f-err">'+esc(S.sheet.err||'')+'</p>';
+  if(S.sheet.confirmDel)h+='<p class="warn">이 게임과 출석 기록이 모두 삭제돼요. 아래 버튼을 한 번 더 누르면 삭제합니다.</p>';
+  h+='<div class="btnrow">'+(editing?'<button class="btn danger" data-act="delGame">'+(S.sheet.confirmDel?'삭제하기':'삭제')+'</button>':'')+
+    '<button class="btn" data-act="saveGame">저장</button></div>';
+  return h;
+}
+
+function renderSheet(){
+  var sh=$('#sheet'),sc=$('#scrim');
+  if(!S.sheet){
+    sh.classList.remove('open');sc.classList.remove('open');sh.setAttribute('aria-hidden','true');
+    document.body.classList.remove('lock');
+    return;
+  }
+  var keep=sh.classList.contains('open')?sh.scrollTop:0;
+  sh.innerHTML=S.sheet.type==='entry'?sheetEntry():(S.sheet.type==='detail'?sheetDetail():sheetGame());
+  sh.scrollTop=keep;
+  sh.classList.add('open');sc.classList.add('open');sh.setAttribute('aria-hidden','false');
+  document.body.classList.add('lock');
+}
+
+function applyPop(){
+  if(!S.popKey)return;
+  var els=document.querySelectorAll('[data-pop="'+S.popKey+'"]'),i;
+  for(i=0;i<els.length;i++)els[i].classList.add('pop');
+  S.popKey=null;
+}
+function refresh(){render();renderSheet();applyPop();}
+
+function syncSheetStamps(){
+  if(!S.sheet||S.sheet.type!=='entry')return;
+  var rows=document.querySelectorAll('#sheet [data-erow]'),i,b,on;
+  for(i=0;i<rows.length;i++){
+    on=isChecked(S.sheet.date,rows[i].getAttribute('data-erow'));
+    b=rows[i].querySelector('.stamp');
+    if(b){if(on)b.classList.add('on');else b.classList.remove('on');b.setAttribute('aria-pressed',on);}
+  }
+}
+
+function toggleDay(date,gid){
+  var cur=rec(date,gid),g=gameById(gid);
+  if(cur!==undefined){
+    setRec(date,gid,undefined);
+    showToast((g?g.name+' ':'')+'출석을 취소했어요',function(){setRec(date,gid,cur);refresh();});
+  }else{
+    var before=[];
+    if(g&&hasGoals(g)){
+      var pi0=attendedInfo(g);
+      before=goalsOf(g).map(function(go){return {id:go.id,st:goalState(go,pi0).st};});
+    }
+    setRec(date,gid,0);S.popKey=gid+'|'+date;hideToast();
+    if(date===todayStr()&&g&&hasGoals(g)){
+      var pi1=attendedInfo(g);
+      goalsOf(g).forEach(function(go){
+        var was=before.filter(function(b){return b.id===go.id;})[0];
+        var now=goalState(go,pi1).st;
+        if(was&&was.st!=='done'&&was.st!=='claimed'&&now==='done'){
+          /* 목표 달성 팝업은 없애고, 카드의 수령 막으로만 알려요 */
+        }
+      });
+    }
+  }
+  refresh();
+  showNextReward();
+}
+function showNextReward(){
+  if(S.rewardModal||!S.rewardQueue.length)return;
+  var item=S.rewardQueue.shift(),g=gameById(item.gid);
+  if(!g){showNextReward();return;}
+  var go=null;(g.goals||[]).forEach(function(x){if(x.id===item.goalId)go=x;});
+  if(!go){showNextReward();return;}
+  S.rewardModal={g:g,go:go};
+  renderRewardModal();
+}
+function renderRewardModal(){
+  var ov=document.getElementById('rwScrim');
+  if(!S.rewardModal){ov.classList.remove('show');return;}
+  var g=S.rewardModal.g,go=S.rewardModal.go;
+  document.getElementById('rwModal').innerHTML=
+    '<div class="rwStamp" style="'+colorStyle(g.color)+'">🎉</div>'+
+    '<h3>'+esc(g.name)+' 목표 달성!</h3>'+
+    '<div class="rwAmt">+'+fmt(go.reward)+g.unit+'</div>'+
+    '<button data-act="closeReward">수령 체크</button><button class="later" data-act="laterReward">나중에</button>';
+  ov.classList.add('show');
+}
+function burstAt(rect,txt){
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var box=document.createElement('div'),cols=['#F6C9DC','#D76A9C','#FFD166','#23806A','#6D55C7','#7BC8F6'],i;
+  box.className='fxfix';
+  var x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+  box.style.left=x+'px';box.style.top=y+'px';
+  for(i=0;i<32;i++){
+    var pt=document.createElement('i'),a=Math.random()*Math.PI*2,d=50+Math.random()*90;
+    pt.className='pt';pt.style.background=cols[i%cols.length];
+    pt.style.setProperty('--dx',Math.cos(a)*d+'px');
+    pt.style.setProperty('--dy',Math.sin(a)*d+'px');
+    pt.style.setProperty('--rot',(Math.random()*720-360)+'deg');
+    box.appendChild(pt);
+  }
+  var f=document.createElement('div');f.className='fl';f.textContent='+'+txt;f.style.top='-12px';box.appendChild(f);
+  document.body.appendChild(box);
+  setTimeout(function(){if(box.parentNode)box.parentNode.removeChild(box);},1200);
+}
+function laterReward(){
+  S.rewardModal=null;
+  renderRewardModal();
+  refresh();
+  setTimeout(showNextReward,250);
+}
+function closeReward(){
+  var item=S.rewardModal;
+  S.rewardModal=null;
+  if(item){
+    var g=gameById(item.g.id),go=null;
+    if(g&&g.goals)g.goals.forEach(function(x){if(x.id===item.go.id)go=x;});
+    if(g&&go&&!go.claimed){
+      go.claimed=true;go.claimedOn=todayStr();
+      addClaimToBalance(g,go);
+      changed('meta');
+    }
+  }
+  renderRewardModal();
+  refresh();
+  setTimeout(function(){
+    showNextReward();
+    if(!S.rewardModal&&!S.rewardQueue.length&&item){
+      var g2=gameById(item.g.id);
+      if(g2&&!g2.archived&&g2.goals&&g2.goals.length&&g2.goals.every(function(x){return x.claimed;})){
+        S.hideSuggest={gid:g2.id};
+        renderHideModal();
+      }
+    }
+  },250);
+}
+function renderHideModal(){
+  var ov=document.getElementById('hdScrim');
+  if(!S.hideSuggest){ov.classList.remove('show');return;}
+  var g=gameById(S.hideSuggest.gid);
+  if(!g){S.hideSuggest=null;ov.classList.remove('show');return;}
+  document.getElementById('hdModal').innerHTML=
+    '<div class="hdIcon">🏆</div>'+
+    '<h3>'+esc(g.name)+' 목표를 다 받았어요</h3>'+
+    '<p>완료로 표시할까요?<br>기록은 그대로 남아있어요.</p>'+
+    '<div class="hdBtns"><button class="hdLater" data-act="hideLater">나중에</button><button class="hdNow" data-act="hideNow" data-g="'+g.id+'">완료 표시</button></div>';
+  ov.classList.add('show');
+}
+function closeHideSuggest(){
+  S.hideSuggest=null;
+  renderHideModal();
+}
+function archiveGame(gid){
+  var g=gameById(gid);
+  if(!g)return;
+  g.archived=true;g.archivedOn=todayStr();
+  changed('meta');
+  closeHideSuggest();
+  render();
+}
+var DPKEY='apptech-attendance-dailypopup';
+function checkDailyPopup(){
+  var t=todayStr();
+  try{if(localStorage.getItem(DPKEY)===t)return;}catch(e){}
+  var items=[];
+  activeGames().forEach(function(g){
+    var found=todaysPayoutFor(g);
+    if(found)items.push({name:g.name,reward:found.reward,unit:g.unit});
+  });
+  if(!items.length)return;
+  var rows='';
+  items.forEach(function(it){rows+='<div class="dpRow"><span>'+esc(it.name)+'</span><b>'+fmt(it.reward)+it.unit+'</b></div>';});
+  document.getElementById('dpModal').innerHTML=
+    '<div class="dpRibbon"><div class="disp">오늘 받을 금액</div><small>출석하면 바로 모여요</small></div>'+
+    '<div class="dpBody">'+rows+'</div>'+
+    '<button data-act="closeDaily">확인</button>';
+  document.getElementById('dpScrim').classList.add('show');
+}
+function closeDailyPopup(){
+  document.getElementById('dpScrim').classList.remove('show');
+  try{localStorage.setItem(DPKEY,todayStr());}catch(e){}
+}
+
+function moveGame(gid,dir){
+  var i=S.games.findIndex(function(g){return g.id===gid;}),j=i+dir;
+  if(i<0||j<0||j>=S.games.length)return;
+  var tmp=S.games[i];S.games[i]=S.games[j];S.games[j]=tmp;
+  changed('meta');render();
+}
+function openGameSheet(gid){
+  var g=gid?gameById(gid):null,goals=[];
+  if(g&&g.goals){
+    goalsOf(g).forEach(function(x){
+      var l=x.due?String(Math.max(0,daysLeft(x.due))):'';
+      goals.push({id:x.id,days:String(x.days),reward:String(x.reward),left:l,leftShown:l,due:x.due||'',claimed:!!x.claimed,claimedOn:x.claimedOn||''});
+    });
+  }
+  S.sheet={type:'game',gid:gid||null,err:'',confirmDel:false,draft:g?
+    {name:g.name,unit:g.unit,color:g.color,memo:g.memo||'',archived:!!g.archived,goals:goals,start:g.start||g.created||todayStr(),base:String(g.base||0)}:
+    {name:'',unit:'원',color:COLORS[S.games.length%COLORS.length],memo:'',archived:false,goals:[],start:todayStr(),base:'0'}};
+  renderSheet();
+}
+
+function editBalance(){
+  S.editingBalance=true;
+  render();
+  var f=document.getElementById('f-bal');
+  if(f){f.focus();f.select();}
+}
+function cancelBalEdit(){
+  S.editingBalance=false;
+  render();
+}
+function saveBalEdit(val){
+  if(!S.editingBalance)return;
+  var amt=parseAmt(String(val).trim());
+  amt=amt>0?Math.round(amt*100)/100:0;
+  var pend=pendingSum(),newAvail=Math.max(0,amt-pend);
+  S.cashBalance=newAvail;
+  S.ledger.push({id:gid_(),kind:'manual',date:todayStr(),amount:newAvail,label:'보유 금액 직접 수정'});
+  S.editingBalance=false;
+  changed('meta');
+  render();
+}
+function editAvail(){
+  S.editingAvail=true;S.editingBalance=false;
+  render();
+  var f=document.getElementById('f-avail');
+  if(f){f.focus();f.select();}
+}
+function cancelAvailEdit(){
+  S.editingAvail=false;
+  render();
+}
+function saveAvailEdit(val){
+  if(!S.editingAvail)return;
+  var amt=parseAmt(String(val).trim());
+  amt=amt>0?Math.round(amt*100)/100:0;
+  var total=(S.cashBalance||0)+pendingSum();
+  var newPend=Math.max(0,Math.round((total-amt)*100)/100);
+  S.pendAdj=Math.round((newPend-pendingBase())*100)/100;
+  S.cashBalance=amt;
+  S.ledger.push({id:gid_(),kind:'manual',date:todayStr(),amount:amt,label:'사용 가능 금액 직접 수정'});
+  S.editingAvail=false;
+  changed('meta');
+  render();
+}
+function startConvert(amt){
+  if(!(amt>0))return;
+  var avail=S.cashBalance||0;
+  if(amt>avail)return;
+  S.convertConfirm={amt:amt,dest:''};
+  S.addingQuick=false;S.quickEditMode=false;
+  render();
+}
+function pickConvertDest(dest){
+  if(!S.convertConfirm)return;
+  S.convertConfirm.dest=dest;
+  render();
+}
+function cancelConvert(){
+  S.convertConfirm=null;
+  render();
+}
+function confirmConvert(){
+  var cc=S.convertConfirm;
+  if(!cc||!cc.dest)return;
+  var avail=S.cashBalance||0;
+  if(cc.amt>avail){S.convertConfirm=null;render();return;}
+  S.cashBalance=avail-cc.amt;
+  S.ledger.push({id:gid_(),kind:'withdraw',date:todayStr(),amount:cc.amt,label:'전환',dest:cc.dest});
+  S.convertConfirm=null;
+  changed('meta');
+  refresh();
+  showToast(fmt(cc.amt)+'원 '+cc.dest+'로 전환했어요',function(){
+    S.ledger.pop();S.cashBalance=avail;changed('meta');refresh();
+  });
+}
+function pendPickerHtml(){
+  var list=S.games.filter(function(g){return !g.archived;}).concat(S.games.filter(function(g){return g.archived;}));
+  if(!list.length)return '<input id="f-pname" class="inp" type="text" maxlength="40" placeholder="이름">';
+  var h='<div class="pgames" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+  list.forEach(function(g){
+    h+='<button type="button" class="pgbtn'+(S.pendGame===g.id?' sel':'')+'" data-act="pickPendGame" data-g="'+esc(g.id)+'">'+esc(g.name)+(g.archived?' (완료)':'')+'</button>';
+  });
+  return h+'</div>';
+}
+function pickPendGame(gid,btn){
+  S.pendGame=gid;
+  var all=document.querySelectorAll('.pgbtn');
+  for(var i=0;i<all.length;i++)all[i].classList.toggle('sel',all[i]===btn);
+}
+function addPend(){
+  S.addingPend=true;S.pendGame='';S.addingQuick=false;S.convertConfirm=null;S.editingAvail=false;S.editingBalance=false;
+  render();
+  var f=document.getElementById('f-pamt');
+  if(f)f.focus();
+}
+function cancelAddPend(){
+  S.addingPend=false;
+  render();
+}
+function confirmAddPend(){
+  if(!S.addingPend)return;
+  var pg=S.pendGame?gameById(S.pendGame):null,nm;
+  if(document.getElementById('f-pname'))nm=document.getElementById('f-pname').value.trim()||'대기 중 보상';
+  else{
+    if(!pg){showToast('게임을 선택해 주세요');return;}
+    nm=pg.name+' 목표 수령';
+  }
+  var amt=parseAmt((document.getElementById('f-pamt')||{value:''}).value);
+  var dv=parseInt(String((document.getElementById('f-pdays')||{value:''}).value).replace(/[^0-9]/g,''),10);
+  if(!(amt>0)){showToast('금액을 입력해 주세요');return;}
+  if(!isFinite(dv))dv=HOLD_DAYS;
+  dv=Math.max(1,Math.min(60,dv));
+  var t=todayStr(),unlock=addDays(t,dv),recv=addDays(unlock,-HOLD_DAYS);
+  if(recv>t)recv=t;
+  var id=gid_(),prevAdj=S.pendAdj||0;
+  /* 이미 사용 가능 수정으로 보류가 잡혀 있었다면 그만큼은 이중으로 더하지 않아요 */
+  var absorb=prevAdj>0?Math.min(prevAdj,amt):0;
+  S.pendAdj=Math.round((prevAdj-absorb)*100)/100;
+  S.ledger.push({id:id,kind:'pending',date:recv,amount:amt,label:nm.slice(0,40),unlockDate:unlock,settled:false});
+  S.addingPend=false;
+  changed('meta');
+  refresh();
+  showToast(fmt(amt)+'원 대기 보상을 추가했어요',function(){
+    var i=S.ledger.findIndex(function(e){return e.id===id;});
+    if(i>=0)S.ledger.splice(i,1);
+    S.pendAdj=prevAdj;changed('meta');refresh();
+  });
+}
+function addQuickAmt(){
+  S.addingQuick=true;S.addingPend=false;S.convertConfirm=null;
+  render();
+  var f=document.getElementById('f-newquick');
+  if(f)f.focus();
+}
+function cancelAddQuick(){
+  S.addingQuick=false;
+  render();
+}
+function confirmAddQuick(val){
+  if(!S.addingQuick)return;
+  var amt=parseAmt(String(val).trim());
+  if(amt>0){
+    amt=Math.round(amt);
+    if(S.quickAmts.indexOf(amt)<0){
+      S.quickAmts.push(amt);
+      S.quickAmts.sort(function(a,b){return a-b;});
+      saveQuickAmts();
+    }
+  }
+  S.addingQuick=false;
+  render();
+}
+function startQuickEdit(){
+  S.quickEditMode=true;S.addingQuick=false;S.convertConfirm=null;
+  render();
+}
+function doneQuickEdit(){
+  S.quickEditMode=false;
+  render();
+}
+function removeQuickAmt(amt){
+  S.quickAmts=S.quickAmts.filter(function(a){return a!==amt;});
+  saveQuickAmts();
+  render();
+}
+function toggleAssetDetail(){
+  S.assetDetail=!S.assetDetail;
+  render();
+}
+function saveGame(){
+  var d=S.sheet.draft,name=d.name.trim(),goals=null,bad=false,t=todayStr();
+  if(!name){S.sheet.err='게임 이름을 입력해 주세요.';renderSheet();var n=$('#f-name');if(n)n.focus();return;}
+  if(d.unit){
+    goals=[];
+    d.goals.forEach(function(x){
+      var dr=String(x.days).trim(),rr=String(x.reward).trim();
+      if(dr===''&&rr==='')return;
+      var days=parseInt(dr,10),rw=parseAmt(rr);
+      if(!(days>=1)||!(rw>0)){bad=true;return;}
+      var due=x.due;
+      if(x.left!==x.leftShown){var lf=String(x.left).trim();due=lf===''?'':addDays(t,Math.max(0,parseInt(lf,10)||0));}
+      goals.push({id:x.id,days:Math.min(days,9999),reward:rw,due:due,claimed:!!x.claimed,claimedOn:x.claimedOn||''});
+    });
+    if(bad){S.sheet.err='목표 일수와 보상을 모두 입력해 주세요.';renderSheet();return;}
+  }
+  var start=/^\d{4}-\d{2}-\d{2}$/.test(d.start)?d.start:t,base=Math.max(0,parseInt(d.base,10)||0);
+  if(S.sheet.gid){
+    var g=gameById(S.sheet.gid);
+    if(g){
+      g.name=name;g.unit=d.unit;g.color=d.color;g.memo=d.memo.trim();if(d.archived&&!g.archived)g.archivedOn=todayStr();
+      if(!d.archived)g.archivedOn='';
+      g.archived=!!d.archived;g.start=start;g.base=base;
+      if(goals)g.goals=goals;
+    }
+  }else{
+    S.games.push({id:gid_(),name:name,unit:d.unit,color:d.color,memo:d.memo.trim(),archived:false,created:t,start:start,base:base,goals:goals||[]});
+  }
+  changed('meta');S.sheet=null;refresh();
+}
+
+function deleteGame(){
+  if(!S.sheet.confirmDel){S.sheet.confirmDel=true;renderSheet();return;}
+  var gid=S.sheet.gid,k,years={};
+  for(k in S.days){if(S.days[k][gid]!==undefined){years['y'+k.slice(0,4)]=1;delete S.days[k][gid];if(!Object.keys(S.days[k]).length)delete S.days[k];}}
+  S.games=S.games.filter(function(g){return g.id!==gid;});
+  if(S.filter===gid)S.filter='all';
+  changed('meta');
+  for(k in years)changed(k);
+  S.sheet=null;refresh();
+}
+
+function entryInput(t){
+  var date=S.sheet.date,gid=t.getAttribute('data-gid'),raw=t.value.trim(),amt=parseAmt(raw),cur=rec(date,gid);
+  if(raw!==''&&amt>0){if(cur!==amt)setRec(date,gid,amt);}
+  else if(raw===''&&cur!==undefined&&cur>0){setRec(date,gid,0);}
+  syncSheetStamps();
+}
+
+/* ---------- backup ---------- */
+function copyBackup(){
+  var str=JSON.stringify({app:'apptech-attendance',v:1,seed:'v2',games:S.games,days:S.days,ledger:S.ledger,cashBalance:S.cashBalance,pendAdj:S.pendAdj||0});
+  var ta=$('#bk');ta.value=str;ta.focus();ta.select();
+  var ok=false;
+  try{ok=document.execCommand('copy');}catch(e){}
+  if(!ok&&navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(str).then(function(){showToast('복사했어요. 메모장 등에 붙여 두세요');},function(){showToast('아래 글자를 직접 복사해 주세요');});
+    return;
+  }
+  showToast(ok?'복사했어요. 메모장 등에 붙여 두세요':'아래 글자를 직접 복사해 주세요');
+}
+function restoreBackup(btn){
+  if(!btn.getAttribute('data-arm')){
+    btn.setAttribute('data-arm','1');btn.textContent='현재 기록을 덮어써요. 한 번 더 누르면 복원';return;
+  }
+  btn.removeAttribute('data-arm');btn.textContent='붙여 넣은 내용으로 복원';
+  var clean=null;
+  try{clean=sanitize(JSON.parse($('#bk').value));}catch(e){}
+  if(!clean){showToast('복원할 수 없는 내용이에요. 복사한 기록을 그대로 붙여 넣어 주세요');return;}
+  S.games=clean.games;S.days=clean.days;S.seed='v2';S.ledger=clean.ledger;S.cashBalance=clean.cashBalance;S.pendAdj=clean.pendAdj;
+  changed('meta');
+  var yrs={},k;for(k in S.days)yrs['y'+k.slice(0,4)]=1;
+  for(k in yrs)changed(k);
+  saveLocal();refresh();checkPendingRelease();showToast('기록을 복원했어요');
+}
+
+/* ---------- events ---------- */
+/* ---------- long-press to edit quick-convert amounts ---------- */
+var quickLongPressed=false,quickPressTimer=null;
+document.addEventListener('pointerdown',function(e){
+  var el=e.target.closest?e.target.closest('button[data-act="quickConvert"]'):null;
+  if(!el)return;
+  quickLongPressed=false;
+  clearTimeout(quickPressTimer);
+  quickPressTimer=setTimeout(function(){quickLongPressed=true;startQuickEdit();},550);
+});
+['pointerup','pointerleave','pointercancel'].forEach(function(ev){
+  document.addEventListener(ev,function(){clearTimeout(quickPressTimer);});
+});
+
+var rowLP=false,rowPressTimer=null,lpOpenedAt=0;
+document.addEventListener('pointerdown',function(e){
+  rowLP=false;clearTimeout(rowPressTimer);
+  var el=e.target.closest?e.target.closest('.row'):null;
+  if(!el||e.target.closest('button'))return;
+  var gid=el.getAttribute('data-g');
+  rowPressTimer=setTimeout(function(){rowLP=true;lpOpenedAt=Date.now();S.sheet={type:'detail',gid:gid};renderSheet();},500);
+});
+['pointerup','pointerleave','pointercancel'].forEach(function(ev){
+  document.addEventListener(ev,function(){clearTimeout(rowPressTimer);});
+});
+document.addEventListener('contextmenu',function(e){if(e.target.closest&&e.target.closest('.row'))e.preventDefault();});
+document.addEventListener('click',function(e){
+  var el=e.target.closest?e.target.closest('[data-act],[data-tab]'):null;
+  if(!el)return;
+  var tab=el.getAttribute('data-tab');
+  if(tab){S.tab=tab;window.scrollTo(0,0);refresh();return;}
+  var act=el.getAttribute('data-act'),gid=el.getAttribute('data-g');
+  switch(act){
+    case 'toggle':toggleDay(todayStr(),gid);break;
+    case 'amount':S.sheet={type:'entry',date:todayStr(),gid:gid};renderSheet();break;
+    case 'day':S.sheet={type:'entry',date:el.getAttribute('data-d'),gid:null};renderSheet();break;
+    case 'etoggle':toggleDay(S.sheet.date,gid);break;
+    case 'prev':S.cal.m--;if(S.cal.m<0){S.cal.m=11;S.cal.y--;}render();break;
+    case 'next':S.cal.m++;if(S.cal.m>11){S.cal.m=0;S.cal.y++;}render();break;
+    case 'thisMonth':var n=new Date();S.cal.y=n.getFullYear();S.cal.m=n.getMonth();render();break;
+    case 'filter':S.filter=el.getAttribute('data-f');render();break;
+    case 'addGame':if(S.tab!=='games'){S.tab='games';render();}openGameSheet(null);break;
+    case 'editGame':openGameSheet(gid);break;
+    case 'pickUnit':S.sheet.draft.unit=el.getAttribute('data-u');renderSheet();break;
+    case 'pickColor':S.sheet.draft.color=el.getAttribute('data-c');renderSheet();break;
+    case 'claim':setClaim(gid,el.getAttribute('data-goal'),true);break;
+    case 'claimcard':
+      var rw=el.closest('.row');
+      if(rw)burstAt(rw.getBoundingClientRect(),el.getAttribute('data-amt'));
+      setClaim(gid,el.getAttribute('data-goal'),true);break;
+    case 'unclaim':setClaim(gid,el.getAttribute('data-goal'),false);break;
+    case 'addGoal':S.sheet.draft.goals.push({id:gid_(),days:'',reward:'',left:'',leftShown:'',due:'',claimed:false,claimedOn:''});renderSheet();break;
+    case 'delGoal':S.sheet.draft.goals.splice(+el.getAttribute('data-i'),1);renderSheet();break;
+    case 'saveGame':saveGame();break;
+    case 'delGame':deleteGame();break;
+    case 'closeSheet':if(Date.now()-lpOpenedAt<450)break;S.sheet=null;refresh();break;
+    case 'closeReward':closeReward();break;
+    case 'laterReward':laterReward();break;
+    case 'closeDaily':closeDailyPopup();break;
+    case 'hideLater':closeHideSuggest();break;
+    case 'hideNow':archiveGame(gid);break;
+    case 'undo':var f=S.undo;S.undo=null;hideToast();if(f)f();break;
+    case 'moveUp':moveGame(gid,-1);break;
+    case 'moveDown':moveGame(gid,1);break;
+    case 'toggleArch':S.showArch=!S.showArch;render();break;
+    case 'toggleClaimed':S.expandClaimed[gid]=!S.expandClaimed[gid];render();break;
+    case 'copyBackup':copyBackup();break;
+    case 'restoreBackup':restoreBackup(el);break;
+    case 'editBalance':editBalance();break;
+    case 'cancelBalEdit':cancelBalEdit();break;
+    case 'saveBalEdit':var fb=document.getElementById('f-bal');saveBalEdit(fb?fb.value:'');break;
+    case 'editAvail':editAvail();break;
+    case 'cancelAvailEdit':cancelAvailEdit();break;
+    case 'saveAvailEdit':var fa=document.getElementById('f-avail');saveAvailEdit(fa?fa.value:'');break;
+    case 'quickConvert':if(!quickLongPressed)startConvert(parseInt(el.getAttribute('data-amt'),10));break;
+    case 'pickConvertDest':pickConvertDest(el.getAttribute('data-d'));break;
+    case 'cancelConvert':cancelConvert();break;
+    case 'confirmConvert':confirmConvert();break;
+    case 'addPend':addPend();break;
+    case 'pickPendGame':pickPendGame(gid,el);break;
+    case 'cancelAddPend':cancelAddPend();break;
+    case 'confirmAddPend':confirmAddPend();break;
+    case 'addQuickAmt':addQuickAmt();break;
+    case 'cancelAddQuick':cancelAddQuick();break;
+    case 'confirmAddQuick':var fq=document.getElementById('f-newquick');confirmAddQuick(fq?fq.value:'');break;
+    case 'removeQuickAmt':removeQuickAmt(parseInt(el.getAttribute('data-amt'),10));break;
+    case 'doneQuickEdit':doneQuickEdit();break;
+    case 'toggleAssetDetail':toggleAssetDetail();break;
+  }
+});
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t&&t.id==='fsizeRange'){
+    var pct=parseInt(t.value,10);
+    setFontSize(pct/100);
+    var lbl=document.getElementById('fsizeLabel');if(lbl)lbl.textContent=pct+'%';
+    return;
+  }
+  if(t&&t.id==='f-avail'){
+    var tot=(S.cashBalance||0)+pendingSum(),pl=document.getElementById('pendLive');
+    if(pl)pl.textContent=fmt(Math.max(0,tot-parseAmt(t.value)));
+    return;
+  }
+  if(!S.sheet)return;
+  if(S.sheet.type==='game'){
+    if(t.id==='f-name'){S.sheet.draft.name=t.value;var er=$('#f-err');if(er)er.textContent='';}
+    else if(t.id==='f-memo')S.sheet.draft.memo=t.value;
+    else if(t.id==='f-arch')S.sheet.draft.archived=t.checked;
+    else if(t.id==='f-start')S.sheet.draft.start=t.value;
+    else if(t.id==='f-base')S.sheet.draft.base=t.value;
+    else if(t.getAttribute&&t.getAttribute('data-goalf')){
+      var row=S.sheet.draft.goals[+t.getAttribute('data-i')];
+      if(row)row[t.getAttribute('data-goalf')]=t.value;
+    }
+  }else if(S.sheet.type==='entry'&&t.getAttribute&&t.getAttribute('data-gid')){
+    entryInput(t);
+  }
+});
+document.addEventListener('change',function(e){
+  if(S.sheet&&S.sheet.type==='game'){
+    if(e.target.id==='f-arch')S.sheet.draft.archived=e.target.checked;
+    else if(e.target.id==='f-start')S.sheet.draft.start=e.target.value;
+  }
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&S.sheet){S.sheet=null;refresh();}
+  if(e.key==='Enter'&&e.target&&e.target.id==='f-bal'){e.target.blur();}
+  if(e.target&&e.target.id==='f-avail'){
+    if(e.key==='Enter')saveAvailEdit(e.target.value);
+    else if(e.key==='Escape'){e.stopPropagation();cancelAvailEdit();}
+  }
+  if(e.key==='Enter'&&e.target&&e.target.id==='f-newquick'){confirmAddQuick(e.target.value);}
+});
+document.addEventListener('blur',function(e){
+  if(e.target&&e.target.id==='f-bal'&&S.editingBalance)saveBalEdit(e.target.value);
+},true);
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&!S.sheet){
+    var rel=checkPendingRelease();
+    render();
+    if(rel&&rel.length){
+      var s=0;rel.forEach(function(e){s+=e.amount;});
+      showToast(fmt(s)+'원이 출금 가능해졌어요');
+    }
+  }
+});
+
+/* ---------- init ---------- */
+loadLocal();
+loadFontSize();
+S.quickAmts=loadQuickAmts();
+var releasedAtInit=checkPendingRelease();
+render();
+connectDb();
+checkDailyPopup();
+if(releasedAtInit&&releasedAtInit.length){
+  var relSum=0;releasedAtInit.forEach(function(e){relSum+=e.amount;});
+  setTimeout(function(){showToast(fmt(relSum)+'원이 출금 가능해졌어요');},600);
+}
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+</script>
+</body>
+</html>
